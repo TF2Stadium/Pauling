@@ -1,0 +1,47 @@
+package main
+
+import (
+	"container/list"
+	"sync"
+
+	"github.com/bitly/go-simplejson"
+)
+
+var EventQueue = &list.List{}
+var EventQueueMutex = &sync.Mutex{}
+
+type Event int
+
+const (
+	EventPlayerDiscconected    Event = 0
+	EventPlayerConnected       Event = 1
+	EventDisconectedFromServer Event = 2
+)
+
+func PushEvent(event Event, value ...interface{}) {
+	json := simplejson.New()
+	json.Set("event", int(event))
+
+	switch event {
+	case EventPlayerDiscconected, EventPlayerConnected:
+		json.Set("lobbyId", value[0].(string))
+		json.Set("commId", value[1].(string))
+	case EventDisconectedFromServer:
+		json.Set("lobbyId", value[0].(string))
+	}
+
+	EventQueueMutex.Lock()
+	EventQueue.PushBack(json)
+	EventQueueMutex.Unlock()
+}
+
+func PopEvent() *simplejson.Json {
+	EventQueueMutex.Lock()
+	val := EventQueue.Front()
+	EventQueueMutex.Unlock()
+
+	if val == nil {
+		return simplejson.New()
+	}
+	return val.Value.(*simplejson.Json)
+}
