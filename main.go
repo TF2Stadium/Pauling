@@ -7,15 +7,21 @@ import (
 	"os"
 )
 
+func overrideFromEnv(constant *string, envVar string) {
+	v := os.Getenv(envVar)
+	if v != "" {
+		*constant = envVar
+	}
+}
+
 func main() {
+	InitLogger()
+	InitConfigs()
 	pauling := new(Pauling)
 	rpc.Register(pauling)
 	rpc.HandleHTTP()
-	port := os.Getenv("PAULING_PORT")
-	if port == "" {
-		port = "1234"
-	}
-
+	port := "1234"
+	overrideFromEnv(&port, "PAULING_PORT")
 	l, err := net.Listen("tcp", ":"+port)
 	if err != nil {
 		Logger.Fatal(err)
