@@ -21,15 +21,13 @@ var formatMap = map[models.LobbyType]string{
 var ConfigsPath = "/src/github.com/TF2Stadium/Pauling/configs/"
 var MapsFile = "maps.json"
 
-type League string
-
 const (
-	LeagueUgc   League = "ugc"
-	LeagueEtf2l League = "etf2l"
+	LeagueUgc   = "ugc"
+	LeagueEtf2l = "etf2l"
 )
 
 //Maps the Map, Format and League to a config
-var configMap map[string]map[string]map[League]string
+var configMap map[string]map[string]map[string]string
 
 var ErrMapNotFound = errors.New("No config for this map was found")
 var ErrLobbyTypeNotFound = errors.New("No config for this format was found")
@@ -50,7 +48,7 @@ func InitConfigs() {
 }
 
 //Return a corresponding config file name for a given map, LobbyType, and League
-func ConfigFileName(mapName string, lobbyType models.LobbyType, league League) (string, error) {
+func ConfigFileName(mapName string, lobbyType models.LobbyType, league string) (string, error) {
 	lobbyTypeMap, ok := configMap[mapName]
 	if !ok {
 		return "", ErrMapNotFound
