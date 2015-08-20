@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"sync"
 	"time"
 
@@ -19,7 +18,7 @@ type Server struct {
 	Map  string // lobby map
 	Name string // server name
 
-	League models.League
+	League string
 	Type   models.LobbyType // 9v9 6v6 4v4...
 
 	LobbyId uint
@@ -27,8 +26,7 @@ type Server struct {
 	Players        []TF2RconWrapper.Player // current number of players in the server
 	AllowedPlayers map[string]bool
 
-	Config *models.ServerConfig // config that should run before the lobby starts
-	Ticker verifyTicker         // timer that will verify()
+	Ticker verifyTicker // timer that will verify()
 
 	//ChatListener  *TF2RconWrapper.RconChatListener
 
@@ -74,9 +72,12 @@ func (s *Server) StartVerifier() error {
 		for {
 			select {
 			case <-s.Ticker.Ticker.C:
-				s.Verify()
+				if !s.Verify() {
+					s.Ticker.Ticker.Stop()
+					s.Rcon.Close()
+					return
+				}
 			case <-s.Ticker.Quit:
-				log.Println("Stopping verifier")
 				s.Ticker.Ticker.Stop()
 				return
 			}
@@ -121,21 +122,9 @@ func (s *Server) Setup() error {
 	}
 
 	// run config
-	config := models.NewServerConfig()
-	config.League = s.League
-	config.Type = s.Type
-	config.Map = s.Map
-	cfg, cfgErr := config.Get()
-
-	if cfgErr == nil {
-		config.Data = cfg
-		configErr := s.ExecConfig(config)
-
-		if configErr != nil {
-			return configErr
-		}
-	} else {
-		return cfgErr
+	err := s.ExecConfig()
+	if err != nil {
+		return err
 	}
 
 	// change map
@@ -145,6 +134,19 @@ func (s *Server) Setup() error {
 		return mapErr
 	}
 
+	return nil
+}
+
+func (s *Server) ExecConfig() error {
+	filePath, err := ConfigFileName(s.Map, s.Type, s.League)
+	if err != nil {
+		return err
+	}
+
+	err = ExecFile(filePath, s.Rcon)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -164,6 +166,7 @@ func (s *Server) Verify() bool {
 		if retries == 6 {
 			Logger.Warning("[Server.Verify] Couldn't query server [" + s.Info.Host +
 				"] after 5 retries")
+			PushEvent(EventDisconectedFromServer, s.LobbyId)
 			return false
 		}
 		retries += 1
@@ -224,21 +227,9 @@ func (s *Server) End() {
 	Logger.Debug("[Server.End]: Ending server -> [" + s.Info.Host + "] from lobby [" + fmt.Sprint(s.LobbyId) + "]")
 	// TODO: upload logs
 
+	PushEvent(EventMatchEnded, s.LobbyId)
 	s.Rcon.Close()
 	s.Ticker.Close()
-}
-
-func (s *Server) ExecConfig(config *models.ServerConfig) error {
-	Logger.Debug("[Server.ExecConfig]: Running config!")
-	configErr := s.Rcon.ExecConfig(config.Data)
-
-	if configErr != nil {
-		Logger.Debug("[Server.ExecConfig]: Error while trying to run config!")
-
-		return configErr
-	}
-
-	return nil
 }
 
 func (s *Server) KickAll() error {
