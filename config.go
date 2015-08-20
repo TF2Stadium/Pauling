@@ -8,6 +8,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"strings"
 
 	"github.com/TF2Stadium/Helen/models"
 	rcon "github.com/TF2Stadium/TF2RconWrapper"
@@ -75,10 +76,16 @@ func ExecFile(path string, rcon *rcon.TF2RconConnection) error {
 
 	reader := bufio.NewReader(file)
 	line, err := reader.ReadString('\n')
+
 	for err != io.EOF {
-		_, rconErr := rcon.Query(line)
-		if rconErr != nil {
-			return rconErr
+		if strings.HasSuffix(line, "exec ") {
+			cfgName := line[strings.Index(line, "exec ")+1 : len(line)-1]
+			ExecFile(cfgName+".cfg", rcon)
+		} else {
+			_, rconErr := rcon.Query(line)
+			if rconErr != nil {
+				return rconErr
+			}
 		}
 		line, err = reader.ReadString('\n')
 	}
