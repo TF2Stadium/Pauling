@@ -15,6 +15,7 @@ func (_ *Pauling) SetupServer(args *models.Args, nop *Noreply) error {
 	s.LobbyId = args.Id
 	s.Info = args.Info
 	s.Type = args.Type
+	s.League = args.League
 	s.Map = args.Map
 
 	err := s.Setup()
