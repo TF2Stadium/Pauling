@@ -54,9 +54,9 @@ func (_ *Pauling) DisallowPlayer(args *models.Args, nop *Noreply) error {
 	return nil
 }
 
-func (_ *Pauling) GetEvent(args *models.Args, json *simplejson.Json) error {
+func (_ *Pauling) GetEvent(args *models.Args, jsonStr *string) error {
 	e := PopEvent()
 	bytes, _ := e.Encode()
-	json.UnmarshalJSON(bytes)
+	*jsonStr = string(bytes)
 	return nil
 }
