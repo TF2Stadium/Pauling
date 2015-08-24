@@ -3,46 +3,51 @@ package main
 import (
 	"container/list"
 	"sync"
-
-	"github.com/bitly/go-simplejson"
 )
 
 var EventQueue = &list.List{}
 var EventQueueMutex = &sync.Mutex{}
 
-type Event string
+type Event map[string]interface{}
 
 const (
-	EventPlayerDiscconected    Event = "playerDisc"
-	EventPlayerConnected       Event = "playerConn"
-	EventDisconectedFromServer Event = "discFromServer"
-	EventMatchEnded            Event = "matchEnded"
+	EventTest                  = "test"
+	EventPlayerDiscconected    = "playerDisc"
+	EventPlayerConnected       = "playerConn"
+	EventDisconectedFromServer = "discFromServer"
+	EventMatchEnded            = "matchEnded"
 )
 
-func PushEvent(event Event, value ...interface{}) {
-	json := simplejson.New()
-	json.Set("event", event)
+func (e *Event) CopyFrom(e2 Event) {
+	for key, value := range e2 {
+		(*e)[key] = value
+	}
+}
 
-	switch event {
+func PushEvent(name string, value ...interface{}) {
+	event := make(Event)
+	event["name"] = name
+
+	switch name {
 	case EventPlayerDiscconected, EventPlayerConnected:
-		json.Set("lobbyId", value[0].(string))
-		json.Set("commId", value[1].(string))
+		event["lobbyId"] = value[0].(string)
+		event["commId"] = value[1].(string)
 	case EventDisconectedFromServer, EventMatchEnded:
-		json.Set("lobbyId", value[0].(uint))
+		event["lobbyId"] = value[0].(uint)
 	}
 
 	EventQueueMutex.Lock()
-	EventQueue.PushBack(json)
+	EventQueue.PushBack(event)
 	EventQueueMutex.Unlock()
 }
 
-func PopEvent() *simplejson.Json {
+func PopEvent() Event {
 	EventQueueMutex.Lock()
 	val := EventQueue.Front()
 	EventQueueMutex.Unlock()
 
 	if val == nil {
-		return simplejson.New()
+		return nil
 	}
-	return val.Value.(*simplejson.Json)
+	return val.Value.(Event)
 }
