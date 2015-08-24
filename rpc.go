@@ -1,14 +1,33 @@
 package main
 
 import (
+	"errors"
 	"sync"
 
 	"github.com/TF2Stadium/Helen/models"
-	"github.com/bitly/go-simplejson"
+	"github.com/TF2Stadium/PlayerStatsScraper/steamid"
 )
 
 type Pauling int
 type Noreply struct{}
+
+func (_ *Pauling) SetupVerifier(args *models.ServerBootstrap, nop *Noreply) error {
+	s := NewServer()
+	LobbyMutexMap[args.LobbyId].Lock()
+	LobbyServerMap[args.LobbyId] = s
+	LobbyMutexMap[args.LobbyId].Unlock()
+	s.LobbyId = args.LobbyId
+	s.Info = args.Info
+	for _, playerId := range args.BannedPlayers {
+		s.AllowedPlayers[playerId] = false
+	}
+	for _, playerId := range args.Players {
+		s.AllowedPlayers[playerId] = true
+	}
+	s.StartVerifier()
+
+	return nil
+}
 
 func (_ *Pauling) SetupServer(args *models.Args, nop *Noreply) error {
 	s := NewServer()
@@ -42,21 +61,25 @@ func (_ *Pauling) End(args *models.Args, nop *Noreply) error {
 }
 
 func (_ *Pauling) AllowPlayer(args *models.Args, nop *Noreply) error {
-	LobbyServerMap[args.Id].AllowedPlayers[args.CommId] = true
+	commId, _ := steamid.SteamIdToCommId(args.SteamId)
+	LobbyServerMap[args.Id].AllowedPlayers[commId] = true
 	return nil
 }
 
 func (_ *Pauling) DisallowPlayer(args *models.Args, nop *Noreply) error {
 	s := LobbyServerMap[args.Id]
-	if s.IsPlayerAllowed(args.CommId) {
-		delete(s.AllowedPlayers, args.CommId)
+	commId, _ := steamid.SteamIdToCommId(args.SteamId)
+	if s.IsPlayerAllowed(commId) {
+		delete(s.AllowedPlayers, commId)
 	}
 	return nil
 }
 
-func (_ *Pauling) GetEvent(args *models.Args, jsonStr *string) error {
+func (_ *Pauling) GetEvent(args *models.Args, event *Event) error {
 	e := PopEvent()
-	bytes, _ := e.Encode()
-	*jsonStr = string(bytes)
+	if e == nil {
+		return errors.New("Event queue empty")
+	}
+	event.CopyFrom(e)
 	return nil
 }
