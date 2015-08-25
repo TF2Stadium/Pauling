@@ -3,12 +3,12 @@ package main
 import (
 	"container/list"
 	"sync"
+
+	"github.com/TF2Stadium/Helen/models"
 )
 
 var EventQueue = &list.List{}
 var EventQueueMutex = &sync.Mutex{}
-
-type Event map[string]interface{}
 
 const (
 	EventTest                  = "test"
@@ -18,14 +18,8 @@ const (
 	EventMatchEnded            = "matchEnded"
 )
 
-func (e *Event) CopyFrom(e2 Event) {
-	for key, value := range e2 {
-		(*e)[key] = value
-	}
-}
-
 func PushEvent(name string, value ...interface{}) {
-	event := make(Event)
+	event := make(models.Event)
 	event["name"] = name
 
 	switch name {
@@ -41,13 +35,16 @@ func PushEvent(name string, value ...interface{}) {
 	EventQueueMutex.Unlock()
 }
 
-func PopEvent() Event {
+func PopEvent() models.Event {
 	EventQueueMutex.Lock()
 	val := EventQueue.Front()
+	if val != nil {
+		EventQueue.Remove(val)
+	}
 	EventQueueMutex.Unlock()
 
 	if val == nil {
 		return nil
 	}
-	return val.Value.(Event)
+	return val.Value.(models.Event)
 }

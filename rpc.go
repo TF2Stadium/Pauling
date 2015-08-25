@@ -75,11 +75,11 @@ func (_ *Pauling) DisallowPlayer(args *models.Args, nop *Noreply) error {
 	return nil
 }
 
-func (_ *Pauling) GetEvent(args *models.Args, event *Event) error {
+func (_ *Pauling) GetEvent(args *models.Args, event *models.Event) error {
 	e := PopEvent()
 	if e == nil {
-		return errors.New("Event queue empty")
+		return models.EventQueueEmptyError
 	}
-	event.CopyFrom(e)
+	*event = e
 	return nil
 }
