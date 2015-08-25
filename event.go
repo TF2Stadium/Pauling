@@ -44,7 +44,9 @@ func PopEvent() models.Event {
 	EventQueueMutex.Unlock()
 
 	if val == nil {
-		return nil
+		e := make(models.Event)
+		e["empty"] = true
+		return e
 	}
 	return val.Value.(models.Event)
 }

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"sync"
 
 	"github.com/TF2Stadium/Helen/models"
@@ -77,9 +76,6 @@ func (_ *Pauling) DisallowPlayer(args *models.Args, nop *Noreply) error {
 
 func (_ *Pauling) GetEvent(args *models.Args, event *models.Event) error {
 	e := PopEvent()
-	if e == nil {
-		return models.EventQueueEmptyError
-	}
 	*event = e
 	return nil
 }
