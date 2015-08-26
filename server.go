@@ -15,9 +15,7 @@ var LobbyServerMap = make(map[uint]*Server)
 var LobbyMutexMap = make(map[uint]*sync.Mutex)
 
 type Server struct {
-	Map  string // lobby map
-	Name string // server name
-
+	Map    string // lobby map
 	League string
 	Type   models.LobbyType // 9v9 6v6 4v4...
 
@@ -30,9 +28,8 @@ type Server struct {
 
 	//ChatListener  *TF2RconWrapper.RconChatListener
 
-	Rcon           *TF2RconWrapper.TF2RconConnection
-	Info           models.ServerRecord
-	ServerPassword string // will store the new server password from the lobby
+.	Rcon *TF2RconWrapper.TF2RconConnection
+	Info models.ServerRecord
 }
 
 // timer used in verify()
@@ -105,7 +102,7 @@ func (s *Server) Setup() error {
 	}
 
 	// changing server password
-	passErr := s.Rcon.ChangeServerPassword(s.ServerPassword)
+	passErr := s.Rcon.ChangeServerPassword(s.Info.ServerPassword)
 
 	if passErr != nil {
 		return passErr
