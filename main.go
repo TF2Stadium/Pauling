@@ -26,7 +26,7 @@ func main() {
 	if err != nil {
 		Logger.Fatal(err)
 	}
-
+	PushEvent("getServers")
 	Logger.Debug("Listening on %s", port)
 	Logger.Fatal(http.Serve(l, nil))
 }
