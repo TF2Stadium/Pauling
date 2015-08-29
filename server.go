@@ -28,7 +28,7 @@ type Server struct {
 
 	//ChatListener  *TF2RconWrapper.RconChatListener
 
-.	Rcon *TF2RconWrapper.TF2RconConnection
+	Rcon *TF2RconWrapper.TF2RconConnection
 	Info models.ServerRecord
 }
 
