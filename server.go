@@ -91,15 +91,7 @@ func (s *Server) Setup() error {
 
 	Logger.Debug("[Server.Setup]: Setting up server -> [" + s.Info.Host + "] from lobby [" + fmt.Sprint(s.LobbyId) + "]")
 
-	// connect to rcon if not connected before
-	if s.Rcon == nil {
-		var err error
-		s.Rcon, err = TF2RconWrapper.NewTF2RconConnection(s.Info.Host, s.Info.RconPassword)
-
-		if err != nil {
-			return err
-		}
-	}
+	s.Rcon, _ = TF2RconWrapper.NewTF2RconConnection(s.Info.Host, s.Info.RconPassword)
 
 	// changing server password
 	passErr := s.Rcon.ChangeServerPassword(s.Info.ServerPassword)

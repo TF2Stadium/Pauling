@@ -5,10 +5,17 @@ import (
 
 	"github.com/TF2Stadium/Helen/models"
 	"github.com/TF2Stadium/PlayerStatsScraper/steamid"
+	rconwrapper "github.com/TF2Stadium/TF2RconWrapper"
 )
 
 type Pauling int
 type Noreply struct{}
+
+func (_ *Pauling) VerifyInfo(info *models.ServerRecord, nop *Noreply) error {
+	_, err := rconwrapper.NewTF2RconConnection(info.Host, info.RconPassword)
+
+	return err
+}
 
 func (_ *Pauling) SetupVerifier(args *models.ServerBootstrap, nop *Noreply) error {
 	s := NewServer()
