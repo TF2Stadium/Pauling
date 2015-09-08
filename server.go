@@ -254,6 +254,8 @@ func (s *Server) End() {
 	// TODO: upload logs
 
 	PushEvent(EventMatchEnded, s.LobbyId)
+	s.stopListening <- true
+	RconListener.Close(s.Rcon)
 	s.Rcon.Close()
 	s.Ticker.Close()
 }
