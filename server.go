@@ -95,6 +95,11 @@ func (s *Server) CommandListener() {
 			return
 		default:
 			message := <-s.ServerListener.Messages
+			if message.Parsed.Type == TF2RconWrapper.WorldGameOver {
+				s.End()
+				return
+			}
+
 			if message.Parsed.Type == TF2RconWrapper.PlayerGlobalMessage {
 				text := message.Parsed.Data.Text
 				if strings.HasPrefix(text, "!rep") {
@@ -188,7 +193,7 @@ func (s *Server) Verify() bool {
 			PushEvent(EventDisconectedFromServer, s.LobbyId)
 			return false
 		}
-		retries += 1
+		retries++
 		time.Sleep(time.Second)
 		Logger.Warning("Failed to get players in server %s: %s", s.LobbyId, err.Error())
 		s.Players, err = s.Rcon.GetPlayers()
@@ -294,7 +299,7 @@ func (s *Server) report(name string) {
 	for _, player := range s.Players {
 		if strings.HasPrefix(player.Username, name) {
 			commId, _ := steamid.SteamIdToCommId(player.SteamID)
-			s.Reps[player.SteamID] += 1
+			s.Reps[player.SteamID]++
 
 			if s.Reps[player.SteamID] == 7 {
 				s.AllowedPlayers[commId] = false
