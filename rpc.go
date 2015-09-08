@@ -31,6 +31,7 @@ func (_ *Pauling) SetupVerifier(args *models.ServerBootstrap, nop *Noreply) erro
 		s.AllowedPlayers[playerId] = true
 	}
 	s.StartVerifier()
+	go s.CommandListener()
 
 	return nil
 }
@@ -78,6 +79,14 @@ func (_ *Pauling) DisallowPlayer(args *models.Args, nop *Noreply) error {
 	if s.IsPlayerAllowed(commId) {
 		delete(s.AllowedPlayers, commId)
 	}
+	return nil
+}
+
+func (_ *Pauling) SubstitutePlayer(args *models.Args, nop *Noreply) error {
+	s := LobbyServerMap[args.Id]
+	commId, _ := steamid.SteamIdToCommId(args.SteamId)
+	commId2, _ := steamid.SteamIdToCommId(args.SteamId2)
+	s.Substitutes[commId2] = commId
 	return nil
 }
 

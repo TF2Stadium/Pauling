@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -23,10 +24,13 @@ type Server struct {
 
 	Players        []TF2RconWrapper.Player // current number of players in the server
 	AllowedPlayers map[string]bool
+	Reps           map[string]int
+	Substitutes    map[string]string
 
 	Ticker verifyTicker // timer that will verify()
 
-	//ChatListener  *TF2RconWrapper.RconChatListener
+	ServerListener *TF2RconWrapper.ServerListener
+	stopListening  chan bool
 
 	Rcon *TF2RconWrapper.TF2RconConnection
 	Info models.ServerRecord
@@ -84,6 +88,28 @@ func (s *Server) StartVerifier() error {
 	return nil
 }
 
+func (s *Server) CommandListener() {
+	for {
+		select {
+		case <-s.stopListening:
+			return
+		default:
+			message := <-s.ServerListener.Messages
+			if message.Parsed.Type == TF2RconWrapper.PlayerGlobalMessage {
+				text := message.Parsed.Data.Text
+				if strings.HasPrefix(text, "!rep") {
+					s.report(text[5:])
+				} else if strings.HasPrefix(text, "!sub") {
+					commid, _ := steamid.SteamIdToCommId(message.Parsed.Data.SteamId)
+					s.Substitutes[commid] = ""
+					PushEvent(EventSubstitute, commid)
+				}
+			}
+
+		}
+	}
+}
+
 func (s *Server) Setup() error {
 	if config.Constants.ServerMockUp {
 		return nil
@@ -122,6 +148,10 @@ func (s *Server) Setup() error {
 	if mapErr != nil {
 		return mapErr
 	}
+
+	//setup and start chat listener
+	s.ServerListener = RconListener.CreateServerListener(s.Rcon)
+	go s.CommandListener()
 
 	return nil
 }
@@ -182,6 +212,13 @@ func (s *Server) Verify() bool {
 
 				if kickErr != nil {
 					Logger.Debug("[Server.Verify]: ERROR -> %s", kickErr)
+				}
+			}
+
+			sub, ok := s.Substitutes[commId]
+			if ok && sub != "" {
+				if inserver, _ := s.IsPlayerInServer(commId); inserver {
+					s.Rcon.KickPlayer(s.Players[i], "[tf2stadium.com]: You have been substituted.")
 				}
 			}
 		}
@@ -249,4 +286,24 @@ func (s *Server) IsPlayerAllowed(commId string) bool {
 	}
 
 	return false
+}
+
+func (s *Server) report(name string) {
+	for _, player := range s.Players {
+		if strings.HasPrefix(player.Username, name) {
+			commId, _ := steamid.SteamIdToCommId(player.SteamID)
+			s.Reps[player.SteamID] += 1
+
+			if s.Reps[player.SteamID] == 7 {
+				s.AllowedPlayers[commId] = false
+				err := s.Rcon.KickPlayer(player, "[tf2stadium.com]: You have been reported.")
+				if err != nil {
+					Logger.Critical("Couldn't kick player: %s", err)
+				}
+
+				PushEvent(EventPlayerReported, commId, s.LobbyId)
+			}
+			return
+		}
+	}
 }
