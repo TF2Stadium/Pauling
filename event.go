@@ -17,7 +17,7 @@ const (
 	EventDisconectedFromServer = "discFromServer"
 	EventMatchEnded            = "matchEnded"
 	EventPlayerReported        = "playerRep"
-	EventSubstitute            = "substitute"
+	EventSubstitute            = "playerSub"
 )
 
 func PushEvent(name string, value ...interface{}) {
