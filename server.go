@@ -162,12 +162,9 @@ func (s *Server) Setup() error {
 }
 
 func (s *Server) ExecConfig() error {
-	filePath, err := ConfigFileName(s.Map, s.Type, s.League)
-	if err != nil {
-		return err
-	}
+	filePath := ConfigName(s.Map, s.Type, s.League)
 
-	err = ExecFile(filePath, s.Rcon)
+	err := ExecFile(filePath, s.Rcon)
 	if err != nil {
 		return err
 	}

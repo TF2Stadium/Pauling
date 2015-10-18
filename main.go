@@ -29,7 +29,6 @@ func getlocalip() string {
 
 func main() {
 	InitLogger()
-	InitConfigs()
 	pauling := new(Pauling)
 	rpc.Register(pauling)
 	rpc.HandleHTTP()
