@@ -1,0 +1,31 @@
+{
+    "cp" : {
+	"na": "na/cp.cfg",
+	"eu": "eu/eu.cfg"
+    }
+    ,
+
+    "koth": {
+	"na": "na/koth.cfg",
+	"eu": "eu/koth.cfg"
+    },
+    
+    "pl": {
+	"na": "na/pl.cfg",
+	"eu": "eu/pl.cfg"
+    },
+    
+    "ctf": {
+	"sixes": {
+	    "na": "eu/"
+	}
+    },
+
+    "ultiduo": {
+	
+    },
+    
+    "plr": {
+	
+    }
+}
