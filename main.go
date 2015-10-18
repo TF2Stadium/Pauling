@@ -33,8 +33,8 @@ func main() {
 	pauling := new(Pauling)
 	rpc.Register(pauling)
 	rpc.HandleHTTP()
-	port := "1234"
-	portRcon := "1235"
+	port := "8001"
+	portRcon := "8002"
 	overrideFromEnv(&port, "PAULING_PORT")
 	overrideFromEnv(&portRcon, "RCON_PORT")
 	l, err := net.Listen("tcp", ":"+port)
