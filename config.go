@@ -9,14 +9,13 @@ import (
 
 	"github.com/TF2Stadium/Helen/models"
 	rcon "github.com/TF2Stadium/TF2RconWrapper"
+	"path/filepath"
 )
 
 var formatMap = map[models.LobbyType]string{
 	models.LobbyTypeSixes:      "sixes",
 	models.LobbyTypeHighlander: "highlander",
 }
-
-var ConfigsPath = "/src/github.com/TF2Stadium/Pauling/configs/"
 
 func ConfigName(mapName string, lobbyType models.LobbyType, ruleset string) string {
 	var file string
@@ -29,7 +28,8 @@ func ConfigName(mapName string, lobbyType models.LobbyType, ruleset string) stri
 //Execute file located at path on rcon
 //TODO: Shouldn't this be in TF2RconWrapper?
 func ExecFile(path string, rcon *rcon.TF2RconConnection) error {
-	file, err := os.Open(os.Getenv("GOPATH") + path)
+	configPath, _ := filepath.Abs("./configs/")
+	file, err := os.Open(configPath + path)
 	if err != nil {
 		return err
 	}
