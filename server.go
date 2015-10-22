@@ -93,8 +93,7 @@ func (s *Server) CommandListener() {
 		select {
 		case <-s.stopListening:
 			return
-		default:
-			message := <-s.ServerListener.Messages
+		case message := <-s.ServerListener.Messages:
 			if message.Parsed.Type == TF2RconWrapper.WorldGameOver {
 				s.End()
 				return

@@ -1,23 +1,23 @@
 {
     "cp" : {
-	"na": "na/cp.cfg",
-	"eu": "eu/eu.cfg"
+	"ugc": "ugc/cp.cfg",
+	"etf2l": "etf2l/etf2l.cfg"
     }
     ,
 
     "koth": {
-	"na": "na/koth.cfg",
-	"eu": "eu/koth.cfg"
+	"ugc": "ugc/koth.cfg",
+	"etf2l": "etf2l/koth.cfg"
     },
     
     "pl": {
-	"na": "na/pl.cfg",
-	"eu": "eu/pl.cfg"
+	"ugc": "ugc/pl.cfg",
+	"etf2l": "etf2l/pl.cfg"
     },
     
     "ctf": {
 	"sixes": {
-	    "na": "eu/"
+	    "ugc": "etf2l/"
 	}
     },
 
