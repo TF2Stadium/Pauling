@@ -16,9 +16,10 @@ var LobbyServerMap = make(map[uint]*Server)
 var LobbyMutexMap = make(map[uint]*sync.Mutex)
 
 type Server struct {
-	Map    string // lobby map
-	League string
-	Type   models.LobbyType // 9v9 6v6 4v4...
+	Map       string // lobby map
+	League    string
+	Type      models.LobbyType // 9v9 6v6 4v4...
+	Whitelist int
 
 	LobbyId uint
 
@@ -142,6 +143,12 @@ func (s *Server) Setup() error {
 
 	// run config
 	err := s.ExecConfig()
+	if err != nil {
+		return err
+	}
+
+	// whitelist
+	err := s.Rcon.Query(fmt.Sprintf("tftrue_whitelist_id %d", s.Whitelist))
 	if err != nil {
 		return err
 	}

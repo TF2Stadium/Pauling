@@ -42,6 +42,7 @@ func (_ *Pauling) SetupServer(args *models.Args, nop *Noreply) error {
 	s.Info = args.Info
 	s.Type = args.Type
 	s.League = args.League
+	s.Whitelist = args.Whitelist
 	s.Map = args.Map
 
 	err := s.Setup()
