@@ -21,7 +21,7 @@ func ConfigName(mapName string, lobbyType models.LobbyType, ruleset string) stri
 	var file string
 	mapType := mapName[:strings.Index(mapName, "_")]
 
-	file = fmt.Sprintf("%s/%s_%s", ruleset, formatMap[lobbyType], mapType)
+	file = fmt.Sprintf("%s/%s_%s.cfg", ruleset, formatMap[lobbyType], mapType)
 	return file
 }
 
