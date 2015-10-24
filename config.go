@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/TF2Stadium/Helen/models"
 	rcon "github.com/TF2Stadium/TF2RconWrapper"
-	"path/filepath"
 )
 
 var formatMap = map[models.LobbyType]string{
@@ -29,7 +29,7 @@ func ConfigName(mapName string, lobbyType models.LobbyType, ruleset string) stri
 //TODO: Shouldn't this be in TF2RconWrapper?
 func ExecFile(path string, rcon *rcon.TF2RconConnection) error {
 	configPath, _ := filepath.Abs("./configs/")
-	file, err := os.Open(configPath + path)
+	file, err := os.Open(configPath + "/" + path)
 	if err != nil {
 		return err
 	}
@@ -50,5 +50,6 @@ func ExecFile(path string, rcon *rcon.TF2RconConnection) error {
 		line, err = reader.ReadString('\n')
 	}
 
+	file.Close()
 	return nil
 }
