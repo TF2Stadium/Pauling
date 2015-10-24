@@ -4,7 +4,6 @@ import (
 	"sync"
 
 	"github.com/TF2Stadium/Helen/models"
-	"github.com/TF2Stadium/PlayerStatsScraper/steamid"
 	rconwrapper "github.com/TF2Stadium/TF2RconWrapper"
 )
 
@@ -69,25 +68,24 @@ func (_ *Pauling) End(args *models.Args, nop *Noreply) error {
 }
 
 func (_ *Pauling) AllowPlayer(args *models.Args, nop *Noreply) error {
-	commId, _ := steamid.SteamIdToCommId(args.SteamId)
-	LobbyServerMap[args.Id].AllowedPlayers[commId] = true
+	LobbyServerMap[args.Id].AllowedPlayers[args.SteamId] = true
+	Logger.Debug("Allowing Players %s", args.SteamId)
 	return nil
 }
 
 func (_ *Pauling) DisallowPlayer(args *models.Args, nop *Noreply) error {
 	s := LobbyServerMap[args.Id]
-	commId, _ := steamid.SteamIdToCommId(args.SteamId)
-	if s.IsPlayerAllowed(commId) {
-		delete(s.AllowedPlayers, commId)
+	if s.IsPlayerAllowed(args.SteamId) {
+		delete(s.AllowedPlayers, args.SteamId)
 	}
+
+	Logger.Debug("Disallowing Player %s from lobby #%d", args.SteamId, args.Id)
 	return nil
 }
 
 func (_ *Pauling) SubstitutePlayer(args *models.Args, nop *Noreply) error {
 	s := LobbyServerMap[args.Id]
-	commId, _ := steamid.SteamIdToCommId(args.SteamId)
-	commId2, _ := steamid.SteamIdToCommId(args.SteamId2)
-	s.Substitutes[commId2] = commId
+	s.Substitutes[args.SteamId] = args.SteamId2
 	return nil
 }
 

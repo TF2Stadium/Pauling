@@ -8,7 +8,6 @@ import (
 
 	"github.com/TF2Stadium/Helen/config"
 	"github.com/TF2Stadium/Helen/models"
-	"github.com/TF2Stadium/PlayerStatsScraper/steamid"
 	"github.com/TF2Stadium/TF2RconWrapper"
 )
 
@@ -71,9 +70,14 @@ func (s *Server) StartVerifier() error {
 	s.Ticker.Ticker = time.NewTicker(10 * time.Second)
 	s.Ticker.Quit = make(chan bool)
 	go func() {
+		once := new(sync.Once)
 		for {
 			select {
 			case <-s.Ticker.Ticker.C:
+				once.Do(func() {
+					s.Rcon, _ = TF2RconWrapper.NewTF2RconConnection(s.Info.Host,
+						s.Info.RconPassword)
+				})
 				if !s.Verify() {
 					s.Ticker.Ticker.Stop()
 					s.Rcon.Close()
@@ -105,9 +109,9 @@ func (s *Server) CommandListener() {
 				if strings.HasPrefix(text, "!rep") {
 					s.report(text[5:])
 				} else if strings.HasPrefix(text, "!sub") {
-					commid, _ := steamid.SteamIdToCommId(message.Parsed.Data.SteamId)
-					s.Substitutes[commid] = ""
-					PushEvent(EventSubstitute, commid)
+					steamID := message.Parsed.Data.SteamId
+					s.Substitutes[steamID] = ""
+					PushEvent(EventSubstitute, steamID)
 				}
 			}
 
@@ -204,17 +208,12 @@ func (s *Server) Verify() bool {
 
 	for i := range s.Players {
 		if s.Players[i].SteamID != "BOT" {
-			commId, idErr := steamid.SteamIdToCommId(s.Players[i].SteamID)
-
-			if idErr != nil {
-				Logger.Debug("[Server.Verify]: ERROR -> %s", idErr)
-			}
-
-			isPlayerAllowed := s.IsPlayerAllowed(commId)
+			steamID := s.Players[i].SteamID
+			isPlayerAllowed := s.IsPlayerAllowed(steamID)
 
 			if isPlayerAllowed == false {
 				Logger.Debug("[Server.Verify]: Kicking player not allowed -> Username [" +
-					s.Players[i].Username + "] CommID [" + commId + "] SteamID [" + s.Players[i].SteamID + "] ")
+					s.Players[i].Username + "] CommID [" + steamID + "] SteamID [" + s.Players[i].SteamID + "] ")
 
 				kickErr := s.Rcon.KickPlayer(s.Players[i], "[tf2stadium.com]: You're not in this lobby...")
 
@@ -223,9 +222,9 @@ func (s *Server) Verify() bool {
 				}
 			}
 
-			sub, ok := s.Substitutes[commId]
+			sub, ok := s.Substitutes[steamID]
 			if ok && sub != "" {
-				if inserver, _ := s.IsPlayerInServer(commId); inserver {
+				if inserver, _ := s.IsPlayerInServer(steamID); inserver {
 					s.Rcon.KickPlayer(s.Players[i], "[tf2stadium.com]: You have been substituted.")
 				}
 			}
@@ -237,13 +236,9 @@ func (s *Server) Verify() bool {
 // check if the given commId is in the server
 func (s *Server) IsPlayerInServer(playerCommId string) (bool, error) {
 	for i := range s.Players {
-		commId, idErr := steamid.SteamIdToCommId(s.Players[i].SteamID)
+		steamID := s.Players[i].SteamID
 
-		if idErr != nil {
-			return false, idErr
-		}
-
-		if playerCommId == commId {
+		if playerCommId == steamID {
 			return true, nil
 		}
 	}
@@ -301,17 +296,16 @@ func (s *Server) IsPlayerAllowed(commId string) bool {
 func (s *Server) report(name string) {
 	for _, player := range s.Players {
 		if strings.HasPrefix(player.Username, name) {
-			commId, _ := steamid.SteamIdToCommId(player.SteamID)
 			s.Reps[player.SteamID]++
 
 			if s.Reps[player.SteamID] == 7 {
-				s.AllowedPlayers[commId] = false
+				s.AllowedPlayers[player.SteamID] = false
 				err := s.Rcon.KickPlayer(player, "[tf2stadium.com]: You have been reported.")
 				if err != nil {
 					Logger.Critical("Couldn't kick player: %s", err)
 				}
 
-				PushEvent(EventPlayerReported, commId, s.LobbyId)
+				PushEvent(EventPlayerReported, player.SteamID, s.LobbyId)
 			}
 			return
 		}
