@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/TF2Stadium/Helen/models"
@@ -8,6 +10,7 @@ import (
 )
 
 func TestConfigName(t *testing.T) {
+	configPath, _ := filepath.Abs("./configs/")
 	cases := []struct {
 		mapName   string
 		lobbyType models.LobbyType
@@ -29,5 +32,9 @@ func TestConfigName(t *testing.T) {
 	for _, test := range cases {
 		name := ConfigName(test.mapName, test.lobbyType, test.ruleset)
 		assert.Equal(t, name, test.config)
+		file, err := os.Open(configPath + "/" + test.config)
+		assert.Nil(t, err)
+		file.Close()
+
 	}
 }

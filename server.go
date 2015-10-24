@@ -148,7 +148,7 @@ func (s *Server) Setup() error {
 	}
 
 	// whitelist
-	err := s.Rcon.Query(fmt.Sprintf("tftrue_whitelist_id %d", s.Whitelist))
+	_, err = s.Rcon.Query(fmt.Sprintf("tftrue_whitelist_id %d", s.Whitelist))
 	if err != nil {
 		return err
 	}
