@@ -27,10 +27,10 @@ func PushEvent(name string, value ...interface{}) {
 	switch name {
 	case EventPlayerDiscconected, EventPlayerConnected:
 		event["lobbyId"] = value[0].(uint)
-		event["commId"] = value[1].(string)
+		event["steamId"] = value[1].(string)
 	case EventPlayerReported, EventSubstitute:
 		event["lobbyid"] = value[0].(uint)
-		event["commId"] = value[1].(string)
+		event["steamId"] = value[1].(string)
 	case EventDisconectedFromServer, EventMatchEnded:
 		event["lobbyId"] = value[0].(uint)
 	}
