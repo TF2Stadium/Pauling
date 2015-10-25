@@ -71,15 +71,25 @@ func (s *Server) StartVerifier() error {
 	s.Ticker.Ticker = time.NewTicker(10 * time.Second)
 	s.Ticker.Quit = make(chan bool)
 	go func() {
+		once := new(sync.Once)
 		for {
 			select {
 			case <-s.Ticker.Ticker.C:
+				once.Do(func() {
+					s.Rcon.Close()
+					s.Rcon, _ = TF2RconWrapper.NewTF2RconConnection(s.Info.Host, s.Info.RconPassword)
+					//setup and start chat listener
+					s.ServerListener = RconListener.CreateServerListener(s.Rcon)
+					go s.CommandListener()
+
+				})
 				if !s.Verify() {
 					s.Ticker.Ticker.Stop()
 					s.Rcon.Close()
 					return
 				}
 			case <-s.Ticker.Quit:
+				Logger.Debug("Stopping logger")
 				s.Ticker.Ticker.Stop()
 				return
 			}
@@ -148,10 +158,7 @@ func (s *Server) Setup() error {
 	}
 
 	// whitelist
-	_, err = s.Rcon.Query(fmt.Sprintf("tftrue_whitelist_id %d", s.Whitelist))
-	if err != nil {
-		return err
-	}
+	s.Rcon.Query(fmt.Sprintf("tftrue_whitelist_id %d", s.Whitelist))
 
 	// change map
 	mapErr := s.Rcon.ChangeMap(s.Map)
@@ -159,10 +166,6 @@ func (s *Server) Setup() error {
 	if mapErr != nil {
 		return mapErr
 	}
-
-	//setup and start chat listener
-	s.ServerListener = RconListener.CreateServerListener(s.Rcon)
-	go s.CommandListener()
 
 	return nil
 }
