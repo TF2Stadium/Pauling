@@ -41,6 +41,7 @@ type Server struct {
 type verifyTicker struct {
 	Ticker *time.Ticker
 	Quit   chan bool
+	Wait   *sync.WaitGroup
 }
 
 func (t *verifyTicker) Close() {
@@ -70,7 +71,11 @@ func (s *Server) StartVerifier() error {
 	}
 	s.Ticker.Ticker = time.NewTicker(10 * time.Second)
 	s.Ticker.Quit = make(chan bool)
+	s.Ticker.Wait = new(sync.WaitGroup)
+	s.stopListening = make(chan bool)
+
 	go func() {
+		s.Ticker.Wait.Add(1)
 		once := new(sync.Once)
 		for {
 			select {
@@ -89,8 +94,9 @@ func (s *Server) StartVerifier() error {
 					return
 				}
 			case <-s.Ticker.Quit:
-				Logger.Debug("Stopping logger")
+				Logger.Debug("Stopping logger for lobby %d", s.LobbyId)
 				s.Ticker.Ticker.Stop()
+				s.Ticker.Wait.Done()
 				return
 			}
 		}
@@ -103,11 +109,11 @@ func (s *Server) CommandListener() {
 	for {
 		select {
 		case <-s.stopListening:
+			Logger.Debug("Stopping Listener for lobby %d", s.LobbyId)
 			return
 		case message := <-s.ServerListener.Messages:
 			if message.Parsed.Type == TF2RconWrapper.WorldGameOver {
 				s.End()
-				return
 			}
 
 			if message.Parsed.Type == TF2RconWrapper.PlayerGlobalMessage {
@@ -135,7 +141,8 @@ func (s *Server) Setup() error {
 	s.Rcon, _ = TF2RconWrapper.NewTF2RconConnection(s.Info.Host, s.Info.RconPassword)
 
 	// changing server password
-	passErr := s.Rcon.ChangeServerPassword(s.Info.ServerPassword)
+	_, passErr := s.Rcon.Query(fmt.Sprintf("sv_password %s", s.Info.ServerPassword))
+	s.Rcon.Query(fmt.Sprintf("sv_password %s", s.Info.ServerPassword))
 
 	if passErr != nil {
 		return passErr
@@ -269,6 +276,7 @@ func (s *Server) End() {
 	RconListener.Close(s.Rcon)
 	s.Rcon.Close()
 	s.Ticker.Close()
+	s.Ticker.Wait.Wait()
 }
 
 func (s *Server) KickAll() error {
