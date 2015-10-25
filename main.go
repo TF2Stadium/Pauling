@@ -47,7 +47,7 @@ func main() {
 	}
 
 	Logger.Debug("Listening for server messages on %s", portRcon)
-	PushEvent("getServers")
+	//PushEvent("getServers")
 	Logger.Debug("Listening on %s", port)
 	Logger.Fatal(http.Serve(l, nil))
 }
