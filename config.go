@@ -1,10 +1,8 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
-	"io"
-	"os"
+	"io/ioutil"
 	"path/filepath"
 	"strings"
 
@@ -29,27 +27,19 @@ func ConfigName(mapName string, lobbyType models.LobbyType, ruleset string) stri
 //TODO: Shouldn't this be in TF2RconWrapper?
 func ExecFile(path string, rcon *rcon.TF2RconConnection) error {
 	configPath, _ := filepath.Abs("./configs/")
-	file, err := os.Open(configPath + "/" + path)
+	data, err := ioutil.ReadFile(configPath + "/" + path)
 	if err != nil {
 		return err
 	}
 
-	reader := bufio.NewReader(file)
-	line, err := reader.ReadString('\n')
+	lines := strings.Split(string(data), "\n")
 
-	for err != io.EOF {
-		if strings.HasSuffix(line, "exec ") {
-			cfgName := line[strings.Index(line, "exec ")+1 : len(line)-1]
-			ExecFile(cfgName+".cfg", rcon)
-		} else {
-			_, rconErr := rcon.Query(line)
-			if rconErr != nil {
-				return rconErr
-			}
+	for _, line := range lines {
+		_, rconErr := rcon.Query(line)
+		if rconErr != nil {
+			return rconErr
+
 		}
-		line, err = reader.ReadString('\n')
 	}
-
-	file.Close()
 	return nil
 }
