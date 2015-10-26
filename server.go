@@ -95,6 +95,8 @@ func (s *Server) StartVerifier() error {
 				}
 			case <-s.Ticker.Quit:
 				Logger.Debug("Stopping logger for lobby %d", s.LobbyId)
+				RconListener.Close(s.Rcon)
+				s.Rcon.Close()
 				s.Ticker.Ticker.Stop()
 				s.Ticker.Wait.Done()
 				return
@@ -113,7 +115,9 @@ func (s *Server) CommandListener() {
 			return
 		case message := <-s.ServerListener.Messages:
 			if message.Parsed.Type == TF2RconWrapper.WorldGameOver {
-				s.End()
+				PushEvent(EventMatchEnded, s.LobbyId)
+				s.Ticker.Quit <- true
+				return
 			}
 
 			if message.Parsed.Type == TF2RconWrapper.PlayerGlobalMessage {
@@ -139,14 +143,6 @@ func (s *Server) Setup() error {
 	Logger.Debug("[Server.Setup]: Setting up server -> [" + s.Info.Host + "] from lobby [" + fmt.Sprint(s.LobbyId) + "]")
 
 	s.Rcon, _ = TF2RconWrapper.NewTF2RconConnection(s.Info.Host, s.Info.RconPassword)
-
-	// changing server password
-	_, passErr := s.Rcon.Query(fmt.Sprintf("sv_password %s", s.Info.ServerPassword))
-	s.Rcon.Query(fmt.Sprintf("sv_password %s", s.Info.ServerPassword))
-
-	if passErr != nil {
-		return passErr
-	}
 
 	// kick players
 	Logger.Debug("[Server.Setup]: Connected to server, getting players...")
@@ -180,7 +176,12 @@ func (s *Server) Setup() error {
 func (s *Server) ExecConfig() error {
 	filePath := ConfigName(s.Map, s.Type, s.League)
 
-	err := ExecFile(filePath, s.Rcon)
+	err := ExecFile("base.cfg", s.Rcon)
+	if err != nil {
+		return err
+	}
+
+	err = ExecFile(filePath, s.Rcon)
 	if err != nil {
 		return err
 	}
@@ -193,6 +194,7 @@ func (s *Server) Verify() bool {
 		return true
 	}
 	Logger.Debug("[Server.Verify]: Verifing server -> [" + s.Info.Host + "] from lobby [" + fmt.Sprint(s.LobbyId) + "]")
+	s.Rcon.Query(fmt.Sprintf("sv_password %s", s.Info.ServerPassword))
 
 	// check if all players in server are in lobby
 	var err error
@@ -259,24 +261,6 @@ func (s *Server) IsPlayerInServer(playerCommId string) (bool, error) {
 	}
 
 	return false, nil
-}
-
-// TODO: get end event from logs
-// `World triggered "Game_Over"`
-func (s *Server) End() {
-	if config.Constants.ServerMockUp {
-		return
-	}
-
-	Logger.Debug("[Server.End]: Ending server -> [" + s.Info.Host + "] from lobby [" + fmt.Sprint(s.LobbyId) + "]")
-	// TODO: upload logs
-
-	PushEvent(EventMatchEnded, s.LobbyId)
-	s.stopListening <- true
-	RconListener.Close(s.Rcon)
-	s.Rcon.Close()
-	s.Ticker.Close()
-	s.Ticker.Wait.Wait()
 }
 
 func (s *Server) KickAll() error {
