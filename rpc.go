@@ -63,7 +63,7 @@ func (_ *Pauling) SetupServer(args *models.Args, nop *Noreply) error {
 
 func (_ *Pauling) End(args *models.Args, nop *Noreply) error {
 	s := LobbyServerMap[args.Id]
-	s.End()
+	s.Ticker.Quit <- true
 	return nil
 }
 
