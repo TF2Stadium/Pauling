@@ -35,11 +35,7 @@ func ExecFile(path string, rcon *rcon.TF2RconConnection) error {
 	lines := strings.Split(string(data), "\n")
 
 	for _, line := range lines {
-		_, rconErr := rcon.Query(line)
-		if rconErr != nil {
-			return rconErr
-
-		}
+		rcon.Query(line)
 	}
 	return nil
 }
