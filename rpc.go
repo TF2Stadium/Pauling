@@ -1,8 +1,6 @@
 package main
 
 import (
-	"sync"
-
 	"github.com/TF2Stadium/Helen/models"
 	rconwrapper "github.com/TF2Stadium/TF2RconWrapper"
 )
@@ -18,19 +16,23 @@ func (_ *Pauling) VerifyInfo(info *models.ServerRecord, nop *Noreply) error {
 
 func (_ *Pauling) SetupVerifier(args *models.ServerBootstrap, nop *Noreply) error {
 	s := NewServer()
-	LobbyMutexMap[args.LobbyId].Lock()
-	LobbyServerMap[args.LobbyId] = s
-	LobbyMutexMap[args.LobbyId].Unlock()
+	ServerMap.Lock()
+	ServerMap.Map[args.LobbyId] = s
+	ServerMap.Unlock()
+
 	s.LobbyId = args.LobbyId
 	s.Info = args.Info
+
+	s.AllowedPlayers.Lock()
+	defer s.AllowedPlayers.Unlock()
+
 	for _, playerId := range args.BannedPlayers {
-		s.AllowedPlayers[playerId] = false
+		s.AllowedPlayers.Map[playerId] = false
 	}
 	for _, playerId := range args.Players {
-		s.AllowedPlayers[playerId] = true
+		s.AllowedPlayers.Map[playerId] = true
 	}
-	s.StartVerifier()
-	go s.CommandListener()
+	NewServerChan <- s
 
 	return nil
 }
@@ -50,39 +52,57 @@ func (_ *Pauling) SetupServer(args *models.Args, nop *Noreply) error {
 		return err
 	}
 
-	err = s.StartVerifier()
-	if err != nil {
-		Logger.Warning(err.Error())
-		return err
-	}
+	NewServerChan <- s
 
-	LobbyServerMap[s.LobbyId] = s
-	LobbyMutexMap[s.LobbyId] = &sync.Mutex{}
+	ServerMap.Lock()
+	ServerMap.Map[s.LobbyId] = s
+	ServerMap.Unlock()
 	return nil
 }
 
 func (_ *Pauling) End(args *models.Args, nop *Noreply) error {
-	s := LobbyServerMap[args.Id]
-	s.Ticker.Quit <- true
+	ServerMap.RLock()
+	s := ServerMap.Map[args.Id]
+	ServerMap.RUnlock()
+
+	s.StopVerifier <- true
 	return nil
 }
 
 func (_ *Pauling) AllowPlayer(args *models.Args, nop *Noreply) error {
-	LobbyServerMap[args.Id].AllowedPlayers[args.SteamId] = true
+	ServerMap.RLock()
+	s := ServerMap.Map[args.Id]
+	ServerMap.RUnlock()
+
+	s.AllowedPlayers.Lock()
+	s.AllowedPlayers.Map[args.SteamId] = true
+	s.AllowedPlayers.Unlock()
+
 	return nil
 }
 
 func (_ *Pauling) DisallowPlayer(args *models.Args, nop *Noreply) error {
-	s := LobbyServerMap[args.Id]
+	ServerMap.RLock()
+	s := ServerMap.Map[args.Id]
+	ServerMap.RUnlock()
+
 	if s.IsPlayerAllowed(args.SteamId) {
-		delete(s.AllowedPlayers, args.SteamId)
+		s.AllowedPlayers.Lock()
+		defer s.AllowedPlayers.Unlock()
+		delete(s.AllowedPlayers.Map, args.SteamId)
 	}
 	return nil
 }
 
 func (_ *Pauling) SubstitutePlayer(args *models.Args, nop *Noreply) error {
-	s := LobbyServerMap[args.Id]
-	s.Substitutes[args.SteamId] = args.SteamId2
+	ServerMap.RLock()
+	s := ServerMap.Map[args.Id]
+	ServerMap.RUnlock()
+
+	s.Substitutes.Lock()
+	s.Substitutes.Map[args.SteamId] = args.SteamId2
+	s.Substitutes.Unlock()
+
 	return nil
 }
 

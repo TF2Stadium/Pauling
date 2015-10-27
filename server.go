@@ -12,8 +12,12 @@ import (
 	"github.com/TF2Stadium/TF2RconWrapper"
 )
 
-var LobbyServerMap = make(map[uint]*Server)
-var LobbyMutexMap = make(map[uint]*sync.Mutex)
+var NewServerChan = make(chan *Server)
+
+var ServerMap = struct {
+	Map map[uint]*Server
+	*sync.RWMutex
+}{make(map[uint]*Server), new(sync.RWMutex)}
 
 type Server struct {
 	Map       string // lobby map
@@ -23,34 +27,58 @@ type Server struct {
 
 	LobbyId uint
 
-	Players        []TF2RconWrapper.Player // current number of players in the server
-	AllowedPlayers map[string]bool
-	Reps           map[string]int
-	Substitutes    map[string]string
+	Players struct {
+		Slice []TF2RconWrapper.Player
+		*sync.RWMutex
+	}
 
-	Ticker verifyTicker // timer that will verify()
+	AllowedPlayers struct {
+		Map map[string]bool
+		*sync.RWMutex
+	}
+
+	Reps struct {
+		Map map[string]int
+		*sync.RWMutex
+	}
+
+	Substitutes struct {
+		Map map[string]string
+		*sync.RWMutex
+	}
+
+	StopVerifier chan bool
 
 	ServerListener *TF2RconWrapper.ServerListener
-	stopListening  chan bool
 
 	Rcon *TF2RconWrapper.TF2RconConnection
 	Info models.ServerRecord
 }
 
-// timer used in verify()
-type verifyTicker struct {
-	Ticker *time.Ticker
-	Quit   chan bool
-	Wait   *sync.WaitGroup
-}
-
-func (t *verifyTicker) Close() {
-	t.Quit <- true
-}
-
 func NewServer() *Server {
-	s := &Server{}
-	s.AllowedPlayers = make(map[string]bool)
+	s := &Server{
+		Players: struct {
+			Slice []TF2RconWrapper.Player
+			*sync.RWMutex
+		}{make([]TF2RconWrapper.Player, 4), new(sync.RWMutex)},
+
+		AllowedPlayers: struct {
+			Map map[string]bool
+			*sync.RWMutex
+		}{make(map[string]bool), new(sync.RWMutex)},
+
+		Reps: struct {
+			Map map[string]int
+			*sync.RWMutex
+		}{make(map[string]int), new(sync.RWMutex)},
+
+		Substitutes: struct {
+			Map map[string]string
+			*sync.RWMutex
+		}{make(map[string]string), new(sync.RWMutex)},
+
+		StopVerifier: make(chan bool),
+	}
 
 	return s
 }
@@ -64,74 +92,54 @@ func NewServer() *Server {
 // -> Info
 //
 
-func (s *Server) StartVerifier() error {
-	// If the ticker is initialized, the verifier is running
-	if s.Ticker.Quit != nil {
-		return nil
-	}
-	s.Ticker.Ticker = time.NewTicker(10 * time.Second)
-	s.Ticker.Quit = make(chan bool)
-	s.Ticker.Wait = new(sync.WaitGroup)
-	s.stopListening = make(chan bool)
+func (s *Server) StartVerifier(ticker *time.Ticker) {
+	s.Rcon.Close()
+	s.Rcon, _ = TF2RconWrapper.NewTF2RconConnection(s.Info.Host, s.Info.RconPassword)
+	// run config
+	s.ExecConfig()
+	s.ServerListener = RconListener.CreateServerListener(s.Rcon)
+	go s.CommandListener()
 
-	go func() {
-		s.Ticker.Wait.Add(1)
-		once := new(sync.Once)
-		for {
-			select {
-			case <-s.Ticker.Ticker.C:
-				once.Do(func() {
-					s.Rcon.Close()
-					s.Rcon, _ = TF2RconWrapper.NewTF2RconConnection(s.Info.Host, s.Info.RconPassword)
-					//setup and start chat listener
-					s.ServerListener = RconListener.CreateServerListener(s.Rcon)
-					go s.CommandListener()
-
-				})
-				if !s.Verify() {
-					s.Ticker.Ticker.Stop()
-					s.Rcon.Close()
-					return
-				}
-			case <-s.Ticker.Quit:
-				Logger.Debug("Stopping logger for lobby %d", s.LobbyId)
-				RconListener.Close(s.Rcon)
+	for {
+		select {
+		case <-ticker.C:
+			if !s.Verify() {
+				ticker.Stop()
 				s.Rcon.Close()
-				s.Ticker.Ticker.Stop()
-				s.Ticker.Wait.Done()
 				return
 			}
+		case <-s.StopVerifier:
+			Logger.Debug("Stopping logger for lobby %d", s.LobbyId)
+			ticker.Stop()
+			RconListener.Close(s.Rcon)
+			s.Rcon.Close()
+			return
 		}
-	}()
-
-	return nil
+	}
 }
 
 func (s *Server) CommandListener() {
 	for {
-		select {
-		case <-s.stopListening:
-			Logger.Debug("Stopping Listener for lobby %d", s.LobbyId)
+		message := <-s.ServerListener.Messages
+		if message.Parsed.Type == TF2RconWrapper.WorldGameOver {
+			PushEvent(EventMatchEnded, s.LobbyId)
+			s.StopVerifier <- true
 			return
-		case message := <-s.ServerListener.Messages:
-			if message.Parsed.Type == TF2RconWrapper.WorldGameOver {
-				PushEvent(EventMatchEnded, s.LobbyId)
-				s.Ticker.Quit <- true
-				return
-			}
-
-			if message.Parsed.Type == TF2RconWrapper.PlayerGlobalMessage {
-				text := message.Parsed.Data.Text
-				if strings.HasPrefix(text, "!rep") {
-					s.report(text[5:])
-				} else if strings.HasPrefix(text, "!sub") {
-					commid, _ := steamid.SteamIdToCommId(message.Parsed.Data.SteamId)
-					s.Substitutes[commid] = ""
-					PushEvent(EventSubstitute, commid)
-				}
-			}
-
 		}
+
+		if message.Parsed.Type == TF2RconWrapper.PlayerGlobalMessage {
+			text := message.Parsed.Data.Text
+			if strings.HasPrefix(text, "!rep") {
+				s.report(text[5:])
+			} else if strings.HasPrefix(text, "!sub") {
+				commid, _ := steamid.SteamIdToCommId(message.Parsed.Data.SteamId)
+				s.Substitutes.Lock()
+				s.Substitutes.Map[commid] = ""
+				s.Substitutes.Unlock()
+				PushEvent(EventSubstitute, commid)
+			}
+		}
+
 	}
 }
 
@@ -140,26 +148,19 @@ func (s *Server) Setup() error {
 		return nil
 	}
 
-	Logger.Debug("[Server.Setup]: Setting up server -> [" + s.Info.Host + "] from lobby [" + fmt.Sprint(s.LobbyId) + "]")
+	Logger.Debug("#%d: Connecting to %s", s.LobbyId, s.Info.Host)
 
 	s.Rcon, _ = TF2RconWrapper.NewTF2RconConnection(s.Info.Host, s.Info.RconPassword)
 
 	// kick players
-	Logger.Debug("[Server.Setup]: Connected to server, getting players...")
+	Logger.Debug("#%d: Kicking all players", s.LobbyId)
 	kickErr := s.KickAll()
 
 	if kickErr != nil {
 		return kickErr
-	} else {
-		Logger.Debug("[Server.Setup]: Players kicked, running config!")
 	}
 
-	// run config
-	err := s.ExecConfig()
-	if err != nil {
-		return err
-	}
-
+	Logger.Debug("#%d: Setting whitelist, changing map", s.LobbyId)
 	// whitelist
 	s.Rcon.Query(fmt.Sprintf("tftrue_whitelist_id %d", s.Whitelist))
 
@@ -176,9 +177,12 @@ func (s *Server) Setup() error {
 func (s *Server) ExecConfig() error {
 	filePath := ConfigName(s.Map, s.Type, s.League)
 
-	err := ExecFile("base.cfg", s.Rcon)
-	if err != nil {
-		return err
+	var err error
+	if s.Type != models.LobbyTypeDebug {
+		err = ExecFile("base.cfg", s.Rcon)
+		if err != nil {
+			return err
+		}
 	}
 
 	err = ExecFile(filePath, s.Rcon)
@@ -193,30 +197,35 @@ func (s *Server) Verify() bool {
 	if config.Constants.ServerMockUp || s.Rcon == nil {
 		return true
 	}
-	Logger.Debug("[Server.Verify]: Verifing server -> [" + s.Info.Host + "] from lobby [" + fmt.Sprint(s.LobbyId) + "]")
-	s.Rcon.Query(fmt.Sprintf("sv_password %s", s.Info.ServerPassword))
+	Logger.Debug("#%d: Verifying %s...", s.Info.Host)
+	s.Rcon.ChangeServerPassword(s.Info.ServerPassword)
 
 	// check if all players in server are in lobby
 	var err error
-	s.Players, err = s.Rcon.GetPlayers()
+	s.Players.Lock()
+	s.Players.Slice, err = s.Rcon.GetPlayers()
+	s.Players.Unlock()
 
 	retries := 0
 	for err != nil { //TODO: Stop connection after x retries
 		if retries == 6 {
-			Logger.Warning("[Server.Verify] Couldn't query server [" + s.Info.Host +
-				"] after 5 retries")
+			Logger.Warning("#%d: Couldn't query %s after 5 retries", s.Info.Host)
 			PushEvent(EventDisconectedFromServer, s.LobbyId)
 			return false
 		}
 		retries++
 		time.Sleep(time.Second)
 		Logger.Warning("Failed to get players in server %s: %s", s.LobbyId, err.Error())
-		s.Players, err = s.Rcon.GetPlayers()
+		s.Players.Lock()
+		s.Players.Slice, err = s.Rcon.GetPlayers()
+		s.Players.Unlock()
 	}
 
-	for i := range s.Players {
-		if s.Players[i].SteamID != "BOT" {
-			commId, idErr := steamid.SteamIdToCommId(s.Players[i].SteamID)
+	s.Players.RLock()
+	defer s.Players.RUnlock()
+	for _, player := range s.Players.Slice {
+		if player.SteamID != "BOT" {
+			commId, idErr := steamid.SteamIdToCommId(player.SteamID)
 
 			if idErr != nil {
 				Logger.Debug("[Server.Verify]: ERROR -> %s", idErr)
@@ -225,20 +234,21 @@ func (s *Server) Verify() bool {
 			isPlayerAllowed := s.IsPlayerAllowed(commId)
 
 			if isPlayerAllowed == false {
-				Logger.Debug("[Server.Verify]: Kicking player not allowed -> Username [" +
-					s.Players[i].Username + "] CommID [" + commId + "] SteamID [" + s.Players[i].SteamID + "] ")
+				Logger.Debug("#%d: Kicking player: %s %s %s", player.Username, commId, player.SteamID)
 
-				kickErr := s.Rcon.KickPlayer(s.Players[i], "[tf2stadium.com]: You're not in this lobby...")
+				kickErr := s.Rcon.KickPlayer(player, "[tf2stadium.com]: You're not in this lobby...")
 
 				if kickErr != nil {
-					Logger.Debug("[Server.Verify]: ERROR -> %s", kickErr)
+					Logger.Critical("#%d: Couldn't kick: ", kickErr)
 				}
 			}
 
-			sub, ok := s.Substitutes[commId]
+			s.Substitutes.RLock()
+			sub, ok := s.Substitutes.Map[commId]
+			s.Substitutes.RUnlock()
 			if ok && sub != "" {
 				if inserver, _ := s.IsPlayerInServer(commId); inserver {
-					s.Rcon.KickPlayer(s.Players[i], "[tf2stadium.com]: You have been substituted.")
+					s.Rcon.KickPlayer(player, "[tf2stadium.com]: You have been substituted.")
 				}
 			}
 		}
@@ -248,8 +258,11 @@ func (s *Server) Verify() bool {
 
 // check if the given commId is in the server
 func (s *Server) IsPlayerInServer(playerCommId string) (bool, error) {
-	for i := range s.Players {
-		commId, idErr := steamid.SteamIdToCommId(s.Players[i].SteamID)
+	s.Players.RLock()
+	defer s.Players.RUnlock()
+
+	for _, player := range s.Players.Slice {
+		commId, idErr := steamid.SteamIdToCommId(player.SteamID)
 
 		if idErr != nil {
 			return false, idErr
@@ -264,18 +277,22 @@ func (s *Server) IsPlayerInServer(playerCommId string) (bool, error) {
 }
 
 func (s *Server) KickAll() error {
-	Logger.Debug("[Server.KickAll]: Kicking players...")
 	var err error
-	s.Players, err = s.Rcon.GetPlayers()
+
+	s.Players.Lock()
+	s.Players.Slice, err = s.Rcon.GetPlayers()
 
 	for err != nil {
 		time.Sleep(time.Second)
-		Logger.Warning("Failed to get players in server %s: %s", s.LobbyId, err.Error())
-		s.Players, err = s.Rcon.GetPlayers()
+		Logger.Critical("%d: Failed to get players in  %s: %s", s.LobbyId, err.Error())
+		s.Players.Slice, err = s.Rcon.GetPlayers()
 	}
+	s.Players.Unlock()
 
-	for i := range s.Players {
-		kickErr := s.Rcon.KickPlayer(s.Players[i], "[tf2stadium.com]: Setting up lobby...")
+	s.Players.RLock()
+	defer s.Players.RUnlock()
+	for _, player := range s.Players.Slice {
+		kickErr := s.Rcon.KickPlayer(player, "[tf2stadium.com]: Setting up lobby...")
 
 		if kickErr != nil {
 			return kickErr
@@ -286,7 +303,10 @@ func (s *Server) KickAll() error {
 }
 
 func (s *Server) IsPlayerAllowed(commId string) bool {
-	if _, ok := s.AllowedPlayers[commId]; ok {
+	s.AllowedPlayers.RLock()
+	defer s.AllowedPlayers.RUnlock()
+
+	if _, ok := s.AllowedPlayers.Map[commId]; ok {
 		return true
 	}
 
@@ -294,20 +314,29 @@ func (s *Server) IsPlayerAllowed(commId string) bool {
 }
 
 func (s *Server) report(name string) {
-	for _, player := range s.Players {
+	s.Players.RLock()
+	defer s.Players.RUnlock()
+
+	for _, player := range s.Players.Slice {
 		if strings.HasPrefix(player.Username, name) {
 			commId, _ := steamid.SteamIdToCommId(player.SteamID)
-			s.Reps[player.SteamID]++
 
-			if s.Reps[player.SteamID] == 7 {
-				s.AllowedPlayers[commId] = false
+			s.Reps.Lock()
+			s.Reps.Map[player.SteamID]++
+
+			if s.Reps.Map[player.SteamID] == 7 {
+				s.AllowedPlayers.Lock()
+				s.AllowedPlayers.Map[commId] = false
+				s.AllowedPlayers.Unlock()
+
 				err := s.Rcon.KickPlayer(player, "[tf2stadium.com]: You have been reported.")
 				if err != nil {
-					Logger.Critical("Couldn't kick player: %s", err)
+					Logger.Critical("#%d: Couldn't kick player: %s", s.LobbyId, err)
 				}
 
 				PushEvent(EventPlayerReported, commId, s.LobbyId)
 			}
+			s.Reps.Unlock()
 			return
 		}
 	}

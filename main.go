@@ -1,12 +1,14 @@
 package main
 
 import (
-	rcon "github.com/TF2Stadium/TF2RconWrapper"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"net/rpc"
 	"os"
+	"time"
+
+	rcon "github.com/TF2Stadium/TF2RconWrapper"
 )
 
 var RconListener *rcon.RconChatListener
@@ -48,6 +50,13 @@ func main() {
 
 	Logger.Debug("Listening for server messages on %s", portRcon)
 	//PushEvent("getServers")
+	go func() {
+		for {
+			s := <-NewServerChan
+			go s.StartVerifier(time.NewTicker(time.Second * 10))
+
+		}
+	}()
 	Logger.Debug("Listening on %s", port)
 	Logger.Fatal(http.Serve(l, nil))
 }
