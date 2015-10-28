@@ -253,7 +253,7 @@ func (s *Server) Verify() bool {
 					s.Rcon.KickPlayer(player, "[tf2stadium.com]: You have been substituted.")
 				}
 			}
-			if !s.PrevConnected[player.SteamID] {
+			if ingame, exists := s.PrevConnected[player.SteamID]; exists && !ingame {
 				s.PrevConnected[player.SteamID] = true
 				PushEvent(EventPlayerConnected, player.SteamID)
 			}
