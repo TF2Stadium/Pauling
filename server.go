@@ -27,6 +27,8 @@ type Server struct {
 
 	LobbyId uint
 
+	PrevConnected map[string]bool
+
 	Players struct {
 		Slice []TF2RconWrapper.Player
 		*sync.RWMutex
@@ -251,8 +253,19 @@ func (s *Server) Verify() bool {
 					s.Rcon.KickPlayer(player, "[tf2stadium.com]: You have been substituted.")
 				}
 			}
+			if !s.PrevConnected[player.SteamID] {
+				s.PrevConnected[player.SteamID] = true
+				PushEvent(EventPlayerConnected, player.SteamID)
+			}
 		}
 	}
+	for steamid, _ := range s.PrevConnected {
+		if ingame, _ := s.IsPlayerInServer(steamid); !ingame {
+			PushEvent(EventPlayerDiscconected, steamid)
+			delete(s.PrevConnected, steamid)
+		}
+	}
+
 	return true
 }
 
