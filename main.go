@@ -43,12 +43,13 @@ func main() {
 		Logger.Fatal(err)
 	}
 
-	RconListener, err = rcon.NewRconChatListener(getlocalip(), portRcon)
+	ip := getlocalip()
+	RconListener, err = rcon.NewRconChatListener(ip, portRcon)
 	if err != nil {
 		Logger.Fatal(err)
 	}
 
-	Logger.Debug("Listening for server messages on %s", portRcon)
+	Logger.Debug("Listening for server messages on %s:%s", ip, portRcon)
 	//PushEvent("getServers")
 	go func() {
 		for {
