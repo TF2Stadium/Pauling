@@ -9,8 +9,8 @@ type Pauling int
 type Noreply struct{}
 
 func (_ *Pauling) VerifyInfo(info *models.ServerRecord, nop *Noreply) error {
-	_, err := rconwrapper.NewTF2RconConnection(info.Host, info.RconPassword)
-
+	c, err := rconwrapper.NewTF2RconConnection(info.Host, info.RconPassword)
+	c.Close()
 	return err
 }
 
