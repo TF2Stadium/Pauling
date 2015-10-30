@@ -1,8 +1,10 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -28,8 +30,8 @@ func ConfigName(mapName string, lobbyType models.LobbyType, ruleset string) stri
 func ExecFile(path string, rcon *rcon.TF2RconConnection) error {
 	configPath, _ := filepath.Abs("./configs/")
 	data, err := ioutil.ReadFile(configPath + "/" + path)
-	if err != nil {
-		return err
+	if err == os.ErrNotExist {
+		return errors.New("Couldn't find config.")
 	}
 
 	lines := strings.Split(string(data), "\n")
