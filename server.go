@@ -199,7 +199,7 @@ func (s *Server) Verify() bool {
 	if config.Constants.ServerMockUp || s.Rcon == nil {
 		return true
 	}
-	Logger.Debug("#%d: Verifying %s...", s.Info.Host)
+	Logger.Debug("#%d: Verifying %s...", s.LobbyId, s.Info.Host)
 	s.Rcon.ChangeServerPassword(s.Info.ServerPassword)
 
 	// check if all players in server are in lobby
