@@ -13,10 +13,10 @@ import (
 
 var RconListener *rcon.RconChatListener
 
-func overrideFromEnv(constant *string, envVar string) {
-	v := os.Getenv(envVar)
-	if v != "" {
-		*constant = envVar
+func overrideFromEnv(constant *string, name string) {
+	val := os.Getenv(name)
+	if "" != val {
+		*constant = val
 	}
 }
 
