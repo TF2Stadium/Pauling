@@ -38,7 +38,7 @@ func main() {
 	portRcon := "8002"
 	overrideFromEnv(&port, "PAULING_PORT")
 	overrideFromEnv(&portRcon, "RCON_PORT")
-	l, err := net.Listen("tcp", ":"+port)
+	l, err := net.Listen("tcp", "127.0.0.1:"+port)
 	if err != nil {
 		Logger.Fatal(err)
 	}
