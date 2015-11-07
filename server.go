@@ -199,7 +199,7 @@ func (s *Server) Verify() bool {
 	if config.Constants.ServerMockUp || s.Rcon == nil {
 		return true
 	}
-	Logger.Debug("#%d: Verifying %s...", s.LobbyId, s.Info.Host)
+	//Logger.Debug("#%d: Verifying %s...", s.LobbyId, s.Info.Host)
 	s.Rcon.ChangeServerPassword(s.Info.ServerPassword)
 
 	// check if all players in server are in lobby
@@ -211,7 +211,7 @@ func (s *Server) Verify() bool {
 	retries := 0
 	for err != nil { //TODO: Stop connection after x retries
 		if retries == 6 {
-			Logger.Warning("#%d: Couldn't query %s after 5 retries", s.Info.Host)
+			Logger.Warning("#%d: Couldn't query %s after 5 retries", s.LobbyId, s.Info.Host)
 			PushEvent(EventDisconectedFromServer, s.LobbyId)
 			return false
 		}
