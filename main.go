@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -38,7 +39,7 @@ func main() {
 	portRcon := "8002"
 	overrideFromEnv(&port, "PAULING_PORT")
 	overrideFromEnv(&portRcon, "RCON_PORT")
-	l, err := net.Listen("tcp", "127.0.0.1:"+port)
+	l, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%s", port))
 	if err != nil {
 		Logger.Fatal(err)
 	}
