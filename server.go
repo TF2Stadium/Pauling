@@ -95,8 +95,20 @@ func NewServer() *Server {
 //
 
 func (s *Server) StartVerifier(ticker *time.Ticker) {
+	var err error
+	var count int
+
 	s.Rcon.Close()
-	s.Rcon, _ = TF2RconWrapper.NewTF2RconConnection(s.Info.Host, s.Info.RconPassword)
+	s.Rcon, err = TF2RconWrapper.NewTF2RconConnection(s.Info.Host, s.Info.RconPassword)
+	for err != nil && count != 5 {
+		Logger.Critical(err.Error())
+		count++
+		s.Rcon, err = TF2RconWrapper.NewTF2RconConnection(s.Info.Host, s.Info.RconPassword)
+	}
+	if count == 5 {
+		PushEvent(EventDisconectedFromServer, s.LobbyId)
+		return
+	}
 	// run config
 	s.ExecConfig()
 	s.ServerListener = RconListener.CreateServerListener(s.Rcon)
@@ -128,6 +140,7 @@ func (s *Server) CommandListener() {
 			s.StopVerifier <- true
 			return
 		}
+		//Logger.Debug(message.Message)
 
 		if message.Parsed.Type == TF2RconWrapper.PlayerGlobalMessage {
 			text := message.Parsed.Data.Text
