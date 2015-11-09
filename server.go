@@ -124,6 +124,7 @@ func (s *Server) StartVerifier(ticker *time.Ticker) {
 			}
 		case <-s.StopVerifier:
 			Logger.Debug("Stopping logger for lobby %d", s.LobbyId)
+			s.Rcon.Query("[tf2stadium.com] Lobby Ended.")
 			ticker.Stop()
 			RconListener.Close(s.Rcon)
 			s.Rcon.Close()
