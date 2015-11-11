@@ -1,12 +1,42 @@
 package main
 
 import (
+	"errors"
+	"sync"
+
 	"github.com/TF2Stadium/Helen/models"
 	rconwrapper "github.com/TF2Stadium/TF2RconWrapper"
 )
 
 type Pauling int
 type Noreply struct{}
+
+var serverMap = struct {
+	Map map[uint]*Server
+	*sync.RWMutex
+}{make(map[uint]*Server), new(sync.RWMutex)}
+
+var ErrNoServer = errors.New("Server doesn't exist.")
+
+func getServer(id uint) (s *Server, err error) {
+	var exists bool
+
+	serverMap.RLock()
+	s, exists = serverMap.Map[id]
+	serverMap.RUnlock()
+
+	if !exists {
+		err = ErrNoServer
+	}
+
+	return
+}
+
+func setServer(id uint, s *Server) {
+	serverMap.Lock()
+	serverMap.Map[id] = s
+	serverMap.Unlock()
+}
 
 func (_ *Pauling) VerifyInfo(info *models.ServerRecord, nop *Noreply) error {
 	c, err := rconwrapper.NewTF2RconConnection(info.Host, info.RconPassword)
@@ -18,9 +48,7 @@ func (_ *Pauling) VerifyInfo(info *models.ServerRecord, nop *Noreply) error {
 
 func (_ *Pauling) SetupVerifier(args *models.ServerBootstrap, nop *Noreply) error {
 	s := NewServer()
-	ServerMap.Lock()
-	ServerMap.Map[args.LobbyId] = s
-	ServerMap.Unlock()
+	setServer(args.LobbyId, s)
 
 	s.LobbyId = args.LobbyId
 	s.Info = args.Info
@@ -56,25 +84,25 @@ func (_ *Pauling) SetupServer(args *models.Args, nop *Noreply) error {
 
 	NewServerChan <- s
 
-	ServerMap.Lock()
-	ServerMap.Map[s.LobbyId] = s
-	ServerMap.Unlock()
+	setServer(args.Id, s)
 	return nil
 }
 
 func (_ *Pauling) End(args *models.Args, nop *Noreply) error {
-	ServerMap.RLock()
-	s := ServerMap.Map[args.Id]
-	ServerMap.RUnlock()
+	s, err := getServer(args.Id)
+	if err != nil {
+		return ErrNoServer
+	}
 
 	s.StopVerifier <- true
 	return nil
 }
 
 func (_ *Pauling) AllowPlayer(args *models.Args, nop *Noreply) error {
-	ServerMap.RLock()
-	s := ServerMap.Map[args.Id]
-	ServerMap.RUnlock()
+	s, err := getServer(args.Id)
+	if err != nil {
+		return ErrNoServer
+	}
 
 	s.AllowedPlayers.Lock()
 	s.AllowedPlayers.Map[args.SteamId] = true
@@ -84,9 +112,10 @@ func (_ *Pauling) AllowPlayer(args *models.Args, nop *Noreply) error {
 }
 
 func (_ *Pauling) DisallowPlayer(args *models.Args, nop *Noreply) error {
-	ServerMap.RLock()
-	s := ServerMap.Map[args.Id]
-	ServerMap.RUnlock()
+	s, err := getServer(args.Id)
+	if err != nil {
+		return ErrNoServer
+	}
 
 	if s.IsPlayerAllowed(args.SteamId) {
 		s.AllowedPlayers.Lock()
@@ -97,9 +126,10 @@ func (_ *Pauling) DisallowPlayer(args *models.Args, nop *Noreply) error {
 }
 
 func (_ *Pauling) SubstitutePlayer(args *models.Args, nop *Noreply) error {
-	ServerMap.RLock()
-	s := ServerMap.Map[args.Id]
-	ServerMap.RUnlock()
+	s, err := getServer(args.Id)
+	if err != nil {
+		return ErrNoServer
+	}
 
 	s.Substitutes.Lock()
 	s.Substitutes.Map[args.SteamId] = args.SteamId2

@@ -14,11 +14,6 @@ import (
 
 var NewServerChan = make(chan *Server)
 
-var ServerMap = struct {
-	Map map[uint]*Server
-	*sync.RWMutex
-}{make(map[uint]*Server), new(sync.RWMutex)}
-
 type Server struct {
 	Map       string // lobby map
 	League    string
