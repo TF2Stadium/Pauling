@@ -16,7 +16,6 @@ const (
 	EventPlayerConnected       = "playerConn"
 	EventDisconectedFromServer = "discFromServer"
 	EventMatchEnded            = "matchEnded"
-	EventPlayerReported        = "playerRep"
 	EventSubstitute            = "playerSub"
 )
 
@@ -28,7 +27,7 @@ func PushEvent(name string, value ...interface{}) {
 	case EventPlayerDiscconected, EventPlayerConnected:
 		event["lobbyId"] = value[0].(uint)
 		event["steamId"] = value[1].(string)
-	case EventPlayerReported, EventSubstitute:
+	case EventSubstitute:
 		event["lobbyid"] = value[0].(uint)
 		event["steamId"] = value[1].(string)
 	case EventDisconectedFromServer, EventMatchEnded:

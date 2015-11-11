@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -138,7 +139,7 @@ func (s *Server) LogListener() {
 		case TF2RconWrapper.PlayerGlobalMessage:
 			text := message.Parsed.Data.Text
 			if strings.HasPrefix(text, "!rep") {
-				s.report(text[5:])
+				s.report(message.Parsed.Data)
 			} else if strings.HasPrefix(text, "!sub") {
 				commID, _ := steamid.SteamIdToCommId(message.Parsed.Data.SteamId)
 				PushEvent(EventSubstitute, commID)
@@ -293,31 +294,54 @@ func (s *Server) IsPlayerAllowed(commId string) bool {
 	return false
 }
 
-func (s *Server) report(name string) {
+var rReport = regexp.MustCompile(`^!rep\s+(.+)\s+(.+)`)
+
+func (s *Server) report(data TF2RconWrapper.PlayerData) {
 	s.Players.RLock()
 	defer s.Players.RUnlock()
 
-	for _, player := range s.Players.Slice {
-		if strings.HasPrefix(player.Username, name) {
-			commId, _ := steamid.SteamIdToCommId(player.SteamID)
+	var team string
+	matches := rReport.FindStringSubmatch(data.Text)
+	if len(matches) != 3 {
+		return
+	}
 
-			s.Reps.Lock()
-			s.Reps.Map[player.SteamID]++
+	switch matches[1] {
+	case "our":
+		team = strings.ToLower(data.Team)
+	case "their":
+		our := strings.ToLower(data.Team)
+		if our == "red" {
+			team = "blu"
+		} else {
+			team = "blu"
+		}
+	}
 
-			if s.Reps.Map[player.SteamID] == 7 {
-				s.AllowedPlayers.Lock()
-				s.AllowedPlayers.Map[commId] = false
-				s.AllowedPlayers.Unlock()
+	slot := team + matches[2]
 
-				err := s.Rcon.KickPlayer(player, "[tf2stadium.com]: You have been reported.")
-				if err != nil {
-					Logger.Critical("#%d: Couldn't kick player: %s", s.LobbyId, err)
-				}
+	s.Slots.RLock()
+	steamid, ok := s.Slots.Map[slot]
+	s.Slots.RUnlock()
+	if !ok {
+		return
+	}
 
-				PushEvent(EventPlayerReported, commId, s.LobbyId)
-			}
-			s.Reps.Unlock()
-			return
+	var repped bool
+	s.Reps.Lock()
+	s.Reps.Map[steamid]++
+	repped = (s.Reps.Map[steamid] == 7)
+	if repped {
+		s.Reps.Map[steamid] = 0
+	}
+	s.Reps.Unlock()
+
+	if repped {
+		PushEvent(EventSubstitute, steamid, s.LobbyId)
+
+		for _, player := range s.Players.Slice {
+			say := fmt.Sprintf("Reported player %s (%s)", player.Username, player.SteamID)
+			s.Rcon.Say(say)
 		}
 	}
 }
