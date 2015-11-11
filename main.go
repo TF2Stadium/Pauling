@@ -9,6 +9,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/DSchalla/go-pid"
 	rcon "github.com/TF2Stadium/TF2RconWrapper"
 )
 
@@ -31,6 +32,11 @@ func getlocalip() string {
 }
 
 func main() {
+	pid := &pid.Instance{}
+	if pid.Create() == nil {
+		defer pid.Remove()
+	}
+
 	InitLogger()
 	pauling := new(Pauling)
 	rpc.Register(pauling)
