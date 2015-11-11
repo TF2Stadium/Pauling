@@ -108,6 +108,10 @@ func (_ *Pauling) AllowPlayer(args *models.Args, nop *Noreply) error {
 	s.AllowedPlayers.Map[args.SteamId] = true
 	s.AllowedPlayers.Unlock()
 
+	s.Slots.Lock()
+	s.Slots.Map[args.Slot] = args.SteamId
+	s.Slots.Unlock()
+
 	return nil
 }
 
@@ -117,23 +121,21 @@ func (_ *Pauling) DisallowPlayer(args *models.Args, nop *Noreply) error {
 		return ErrNoServer
 	}
 
-	if s.IsPlayerAllowed(args.SteamId) {
-		s.AllowedPlayers.Lock()
-		defer s.AllowedPlayers.Unlock()
-		delete(s.AllowedPlayers.Map, args.SteamId)
-	}
-	return nil
-}
-
-func (_ *Pauling) SubstitutePlayer(args *models.Args, nop *Noreply) error {
-	s, err := getServer(args.Id)
-	if err != nil {
-		return ErrNoServer
+	if !s.IsPlayerAllowed(args.SteamId) {
+		return nil
 	}
 
-	s.Substitutes.Lock()
-	s.Substitutes.Map[args.SteamId] = args.SteamId2
-	s.Substitutes.Unlock()
+	s.AllowedPlayers.Lock()
+	defer s.AllowedPlayers.Unlock()
+	delete(s.AllowedPlayers.Map, args.SteamId)
+
+	s.Slots.Lock()
+	for slot, steamID := range s.Slots.Map {
+		if steamID == args.SteamId {
+			delete(s.Slots.Map, slot)
+		}
+	}
+	s.Slots.Unlock()
 
 	return nil
 }

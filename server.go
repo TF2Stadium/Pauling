@@ -34,13 +34,13 @@ type Server struct {
 		*sync.RWMutex
 	}
 
-	Reps struct {
-		Map map[string]int
+	Slots struct {
+		Map map[string]string
 		*sync.RWMutex
 	}
 
-	Substitutes struct {
-		Map map[string]string
+	Reps struct {
+		Map map[string]int
 		*sync.RWMutex
 	}
 
@@ -68,11 +68,6 @@ func NewServer() *Server {
 			Map map[string]int
 			*sync.RWMutex
 		}{make(map[string]int), new(sync.RWMutex)},
-
-		Substitutes: struct {
-			Map map[string]string
-			*sync.RWMutex
-		}{make(map[string]string), new(sync.RWMutex)},
 
 		StopVerifier: make(chan bool),
 	}
@@ -129,8 +124,12 @@ func (s *Server) StartVerifier(ticker *time.Ticker) {
 }
 
 func (s *Server) LogListener() {
+	//Steam IDs used in Source logs are of the form [C:U:A]
+	//We convert these into a 64-bit Steam Community ID, which
+	//is what Helen uses (and is sent in RPC calls)
 	for {
 		message := <-s.ServerListener.Messages
+
 		switch message.Parsed.Type {
 		case TF2RconWrapper.WorldGameOver:
 			PushEvent(EventMatchEnded, s.LobbyId)
@@ -142,9 +141,6 @@ func (s *Server) LogListener() {
 				s.report(text[5:])
 			} else if strings.HasPrefix(text, "!sub") {
 				commID, _ := steamid.SteamIdToCommId(message.Parsed.Data.SteamId)
-				s.Substitutes.Lock()
-				s.Substitutes.Map[commID] = ""
-				s.Substitutes.Unlock()
 				PushEvent(EventSubstitute, commID)
 			}
 		case TF2RconWrapper.WorldPlayerConnected:
