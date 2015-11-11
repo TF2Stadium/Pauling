@@ -70,6 +70,10 @@ func NewServer() *Server {
 			*sync.RWMutex
 		}{make(map[string]int), new(sync.RWMutex)},
 
+		Slots: struct {
+			Map map[string]string
+			*sync.RWMutex
+		}{make(map[string]string), new(sync.RWMutex)},
 		StopVerifier: make(chan bool),
 	}
 
@@ -142,7 +146,10 @@ func (s *Server) LogListener() {
 				s.report(message.Parsed.Data)
 			} else if strings.HasPrefix(text, "!sub") {
 				commID, _ := steamid.SteamIdToCommId(message.Parsed.Data.SteamId)
-				PushEvent(EventSubstitute, commID)
+				PushEvent(EventSubstitute, s.LobbyId, commID)
+				say := fmt.Sprintf("Reporting player %s (%s)",
+					message.Parsed.Data.Username, message.Parsed.Data.SteamId)
+				s.Rcon.Say(say)
 			}
 		case TF2RconWrapper.WorldPlayerConnected:
 			commID, _ := steamid.SteamIdToCommId(message.Parsed.Data.SteamId)
@@ -330,18 +337,26 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 	var repped bool
 	s.Reps.Lock()
 	s.Reps.Map[steamid]++
+	votes := s.Reps.Map[steamid]
 	repped = (s.Reps.Map[steamid] == 7)
 	if repped {
 		s.Reps.Map[steamid] = 0
 	}
 	s.Reps.Unlock()
 
+	var player TF2RconWrapper.Player
+
 	if repped {
 		PushEvent(EventSubstitute, steamid, s.LobbyId)
 
-		for _, player := range s.Players.Slice {
-			say := fmt.Sprintf("Reported player %s (%s)", player.Username, player.SteamID)
+		for _, p := range s.Players.Slice {
+			player = p
+			say := fmt.Sprintf("Reported player %s (%s)", p.Username, p.SteamID)
 			s.Rcon.Say(say)
 		}
+	} else {
+		say := fmt.Sprintf("Reporting %s (%s): %d/7 votes",
+			player.Username, player.SteamID, votes)
+		s.Rcon.Say(say)
 	}
 }
