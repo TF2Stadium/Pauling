@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
@@ -192,7 +193,7 @@ func (s *Server) Setup() error {
 	// whitelist
 	s.Rcon.Query(fmt.Sprintf("tftrue_whitelist_id %d", s.Whitelist))
 
-	filePath := ConfigName(s.Map, s.Type, s.League)
+	filePath, _ := filepath.Abs("./configs/" + ConfigName(s.Map, s.Type, s.League))
 
 	f, err := os.Open(filePath)
 	if err != nil {
