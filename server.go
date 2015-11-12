@@ -1,7 +1,9 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"os"
 	"regexp"
 	"strings"
 	"sync"
@@ -190,6 +192,14 @@ func (s *Server) Setup() error {
 	// whitelist
 	s.Rcon.Query(fmt.Sprintf("tftrue_whitelist_id %d", s.Whitelist))
 
+	filePath := ConfigName(s.Map, s.Type, s.League)
+
+	f, err := os.Open(filePath)
+	if err != nil {
+		return errors.New("Config doesn't exist.")
+	}
+	f.Close()
+
 	// change map
 	mapErr := s.Rcon.ChangeMap(s.Map)
 
@@ -224,21 +234,18 @@ func (s *Server) Verify() bool {
 		return true
 	}
 	//Logger.Debug("#%d: Verifying %s...", s.LobbyId, s.Info.Host)
-	s.Rcon.ChangeServerPassword(s.Info.ServerPassword)
-
-	// check if all players in server are in lobby
-	var err error
+	var err = s.Rcon.ChangeServerPassword(s.Info.ServerPassword)
 
 	retries := 0
 	for err != nil { //TODO: Stop connection after x retries
 		if retries == 6 {
-			Logger.Warning("#%d: Couldn't query %s after 5 retries", s.LobbyId, s.Info.Host)
+			//Logger.Warning("#%d: Couldn't query %s after 5 retries", s.LobbyId, s.Info.Host)
 			PushEvent(EventDisconectedFromServer, s.LobbyId)
 			return false
 		}
 		retries++
 		time.Sleep(time.Second)
-		Logger.Warning("Failed to get players in server %s: %s", s.LobbyId, err.Error())
+		err = s.Rcon.ChangeServerPassword(s.Info.ServerPassword)
 	}
 
 	return true
