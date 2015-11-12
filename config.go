@@ -1,10 +1,8 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -15,13 +13,22 @@ import (
 var formatMap = map[models.LobbyType]string{
 	models.LobbyTypeSixes:      "sixes",
 	models.LobbyTypeHighlander: "highlander",
+	models.LobbyTypeBball:      "bball",
+	models.LobbyTypeFours:      "fours",
+	models.LobbyTypeDebug:      "debug",
 }
 
 func ConfigName(mapName string, lobbyType models.LobbyType, ruleset string) string {
 	var file string
 	mapType := mapName[:strings.Index(mapName, "_")]
+	formatString := formatMap[lobbyType]
 
-	file = fmt.Sprintf("%s/%s_%s.cfg", ruleset, mapType, formatMap[lobbyType])
+	if strings.HasPrefix(mapName, "ultiduo") || strings.HasPrefix(mapName, "koth_ultiduo") {
+		mapType = "koth"
+		formatString = "ultiduo"
+	}
+
+	file = fmt.Sprintf("%s/%s_%s.cfg", ruleset, mapType, formatString)
 	return file
 }
 
@@ -29,10 +36,7 @@ func ConfigName(mapName string, lobbyType models.LobbyType, ruleset string) stri
 //TODO: Shouldn't this be in TF2RconWrapper?
 func ExecFile(path string, rcon *rcon.TF2RconConnection) error {
 	configPath, _ := filepath.Abs("./configs/")
-	data, err := ioutil.ReadFile(configPath + "/" + path)
-	if err == os.ErrNotExist {
-		return errors.New("Couldn't find config.")
-	}
+	data, _ := ioutil.ReadFile(configPath + "/" + path)
 
 	lines := strings.Split(string(data), "\n")
 
