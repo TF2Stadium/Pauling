@@ -197,6 +197,7 @@ func (s *Server) Setup() error {
 
 	f, err := os.Open(filePath)
 	if err != nil {
+		//Logger.Debug("%s %s", filePath, err.Error())
 		return errors.New("Config doesn't exist.")
 	}
 	f.Close()
