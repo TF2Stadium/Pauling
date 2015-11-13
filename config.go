@@ -14,21 +14,20 @@ var formatMap = map[models.LobbyType]string{
 	models.LobbyTypeSixes:      "sixes",
 	models.LobbyTypeHighlander: "highlander",
 	models.LobbyTypeBball:      "bball",
+	models.LobbyTypeUltiduo:    "ultiduo",
 	models.LobbyTypeFours:      "fours",
 	models.LobbyTypeDebug:      "debug",
 }
 
 func ConfigName(mapName string, lobbyType models.LobbyType, ruleset string) string {
-	var file string
 	mapType := mapName[:strings.Index(mapName, "_")]
 	formatString := formatMap[lobbyType]
 
-	if strings.HasPrefix(mapName, "ultiduo") || strings.HasPrefix(mapName, "koth_ultiduo") {
+	if strings.HasPrefix(mapName, "ultiduo") {
 		mapType = "koth"
-		formatString = "ultiduo"
 	}
 
-	file = fmt.Sprintf("%s/%s_%s.cfg", ruleset, mapType, formatString)
+	file := fmt.Sprintf("%s/%s_%s.cfg", ruleset, mapType, formatString)
 	return file
 }
 
