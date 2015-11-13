@@ -9,7 +9,7 @@ import (
 var Logger = logging.MustGetLogger("main")
 
 var format = logging.MustStringFormatter(
-	"%{color}%{time:15:04:05.000} %{shortfunc} ▶ %{level:.4s} %{id:03x}%{color:reset} %{message}",
+	`%{time:15:04:05} %{color} [%{level:.4s}] %{shortfunc}() : %{message} %{color:reset}`,
 )
 
 // Sample usage
