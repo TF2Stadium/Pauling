@@ -41,6 +41,10 @@ func setServer(id uint, s *Server) {
 func (_ *Pauling) VerifyInfo(info *models.ServerRecord, nop *Noreply) error {
 	c, err := rconwrapper.NewTF2RconConnection(info.Host, info.RconPassword)
 	if c != nil {
+		_, err = c.Query("tftrue_gamedesc")
+		if err != nil {
+			err = errors.New("TFTrue isn't installed on the server.")
+		}
 		c.Close()
 	}
 	return err
