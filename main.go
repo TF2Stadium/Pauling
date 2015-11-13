@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
-	//_ "net/http/pprof"
+	_ "net/http/pprof"
 	"net/rpc"
 	"os"
 	"time"
@@ -23,6 +23,16 @@ func overrideFromEnv(constant *string, name string) {
 	}
 }
 
+func overrideBoolFromEnv(constant *bool, name string) {
+	val := os.Getenv(name)
+	if val != "" {
+		*constant = map[string]bool{
+			"true":  true,
+			"false": false,
+		}[val]
+	}
+}
+
 func getlocalip() string {
 	resp, err := http.Get("http://api.ipify.org")
 	if err != nil {
@@ -33,16 +43,26 @@ func getlocalip() string {
 }
 
 func main() {
-	// go func() {
-	// 	Logger.Error(http.ListenAndServe("localhost:6060", nil).Error())
-	// }()
+	InitLogger()
+
+	var profilerEnable bool
+	profilerPort := "6061"
+	overrideFromEnv(&profilerPort, "PROFILER_PORT")
+	overrideBoolFromEnv(&profilerEnable, "PROFILER_ENABLE")
+
+	if profilerEnable {
+		address := "localhost:" + profilerPort
+		go func() {
+			Logger.Error(http.ListenAndServe(address, nil).Error())
+		}()
+		Logger.Debug("Running Profiler on %s", address)
+	}
 
 	pid := &pid.Instance{}
 	if pid.Create() == nil {
 		defer pid.Remove()
 	}
 
-	InitLogger()
 	pauling := new(Pauling)
 	rpc.Register(pauling)
 	rpc.HandleHTTP()
