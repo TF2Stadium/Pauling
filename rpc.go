@@ -78,7 +78,7 @@ func (_ *Pauling) SetupServer(args *models.Args, nop *Noreply) error {
 
 	err := s.Setup()
 	if err != nil {
-		Logger.Warning(err.Error())
+		//Logger.Warning(err.Error())
 		return err
 	}
 
@@ -94,7 +94,10 @@ func (_ *Pauling) End(args *models.Args, nop *Noreply) error {
 		return ErrNoServer
 	}
 
+	//now := time.Now().Unix()
 	s.StopVerifier <- true
+	//Logger.Debug("%d", time.Now().Unix()-now)
+
 	return nil
 }
 

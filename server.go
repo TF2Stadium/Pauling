@@ -232,9 +232,6 @@ func (s *Server) ExecConfig() error {
 
 // runs each 10 sec
 func (s *Server) Verify() bool {
-	if config.Constants.ServerMockUp || s.Rcon == nil {
-		return true
-	}
 	//Logger.Debug("#%d: Verifying %s...", s.LobbyId, s.Info.Host)
 	var err = s.Rcon.ChangeServerPassword(s.Info.ServerPassword)
 

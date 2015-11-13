@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	//_ "net/http/pprof"
 	"net/rpc"
 	"os"
 	"time"
@@ -32,6 +33,10 @@ func getlocalip() string {
 }
 
 func main() {
+	// go func() {
+	// 	Logger.Error(http.ListenAndServe("localhost:6060", nil).Error())
+	// }()
+
 	pid := &pid.Instance{}
 	if pid.Create() == nil {
 		defer pid.Remove()
