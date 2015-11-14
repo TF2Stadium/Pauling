@@ -191,7 +191,35 @@ func (s *Server) Setup() error {
 
 	Logger.Debug("#%d: Setting whitelist, changing map", s.LobbyId)
 	// whitelist
-	s.Rcon.Query(fmt.Sprintf("tftrue_whitelist_id %d", s.Whitelist))
+	_, err := s.Rcon.Query(fmt.Sprintf("tftrue_whitelist_id %d", s.Whitelist))
+	if err == TF2RconWrapper.UnknownCommandError {
+		var whitelist string
+
+		switch s.Whitelist {
+		case 3250:
+			whitelist = "etf2l_whitelist_9v9.txt"
+		case 4498:
+			whitelist = "etf2l_whitelist_6v6.txt"
+		case 3312:
+			whitelist = "etf2l_whitelist_ultiduo.txt"
+		case 3759:
+			whitelist = "etf2l_whitelist_bball.txt"
+
+		case 3951:
+			whitelist = "item_whitelist_ugc_HL.txt"
+		case 4559:
+			whitelist = "item_whitelist_ugc_6v6.txt"
+		case 3771:
+			whitelist = "item_whitelist_ugc_4v4.txt"
+
+		case 3688:
+			whitelist = "esea/item_whitelist.txt"
+			// case 4034:
+
+			// case 3872:
+		}
+		s.Rcon.Query("mp_tournament_whitelist " + whitelist)
+	}
 
 	filePath, _ := filepath.Abs("./configs/" + ConfigName(s.Map, s.Type, s.League))
 
