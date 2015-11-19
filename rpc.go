@@ -148,6 +148,7 @@ func (_ *Pauling) DisallowPlayer(args *models.Args, nop *Noreply) error {
 }
 
 func (_ *Pauling) GetEvent(args *models.Args, event *models.Event) error {
-	*event = <-EventQueue
+	e := PopEvent()
+	*event = e
 	return nil
 }
