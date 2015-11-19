@@ -48,7 +48,7 @@ type Server struct {
 		*sync.RWMutex
 	}
 
-	StopVerifier chan bool
+	StopVerifier chan struct{}
 
 	ServerListener *TF2RconWrapper.ServerListener
 
@@ -77,7 +77,7 @@ func NewServer() *Server {
 			Map map[string]string
 			*sync.RWMutex
 		}{make(map[string]string), new(sync.RWMutex)},
-		StopVerifier: make(chan bool),
+		StopVerifier: make(chan struct{}),
 	}
 
 	return s
@@ -141,7 +141,7 @@ func (s *Server) LogListener() {
 		switch message.Parsed.Type {
 		case TF2RconWrapper.WorldGameOver:
 			PushEvent(EventMatchEnded, s.LobbyId)
-			s.StopVerifier <- true
+			close(s.StopVerifier)
 			return
 		case TF2RconWrapper.PlayerGlobalMessage:
 			text := message.Parsed.Data.Text

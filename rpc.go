@@ -99,7 +99,7 @@ func (_ *Pauling) End(args *models.Args, nop *Noreply) error {
 	}
 
 	//now := time.Now().Unix()
-	s.StopVerifier <- true
+	close(s.StopVerifier)
 	//Logger.Debug("%d", time.Now().Unix()-now)
 
 	return nil
