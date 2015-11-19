@@ -1,14 +1,10 @@
 package main
 
 import (
-	"container/list"
-	"sync"
-
 	"github.com/TF2Stadium/Helen/models"
 )
 
-var EventQueue = &list.List{}
-var EventQueueMutex = &sync.Mutex{}
+var EventQueue = make(chan models.Event, 100)
 
 const (
 	EventTest                  = "test"
@@ -34,23 +30,5 @@ func PushEvent(name string, value ...interface{}) {
 		event["lobbyId"] = value[0].(uint)
 	}
 
-	EventQueueMutex.Lock()
-	EventQueue.PushBack(event)
-	EventQueueMutex.Unlock()
-}
-
-func PopEvent() models.Event {
-	EventQueueMutex.Lock()
-	val := EventQueue.Front()
-	if val != nil {
-		EventQueue.Remove(val)
-	}
-	EventQueueMutex.Unlock()
-
-	if val == nil {
-		e := make(models.Event)
-		e["empty"] = true
-		return e
-	}
-	return val.Value.(models.Event)
+	EventQueue <- event
 }
