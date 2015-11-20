@@ -336,6 +336,7 @@ func (s *Server) IsPlayerAllowed(commId string) bool {
 }
 
 var rReport = regexp.MustCompile(`^!rep\s+(.+)\s+(.+)`)
+var stopRepTimeout = make(map[uint](chan struct{}))
 
 func (s *Server) report(data TF2RconWrapper.PlayerData) {
 	s.Players.RLock()
@@ -355,7 +356,7 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 		if our == "red" {
 			team = "blu"
 		} else {
-			team = "blu"
+			team = "red"
 		}
 	}
 
@@ -378,6 +379,27 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 	}
 	s.Reps.Unlock()
 
+	if votes == 1 {
+		c := make(chan struct{})
+		stopRepTimeout[s.LobbyId] = c
+		tick := time.After(time.Minute * 1)
+
+		go func() {
+			for {
+				select {
+				case <-tick:
+					s.Reps.Lock()
+					s.Reps.Map[steamid] = 0
+					s.Reps.Unlock()
+					s.Rcon.Say("Not sufficient votes after 1 minute, player not reported.")
+					return
+				case <-c:
+					return
+				}
+			}
+		}()
+	}
+
 	var player TF2RconWrapper.Player
 
 	if repped {
@@ -387,6 +409,9 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 			player = p
 			say := fmt.Sprintf("Reported player %s (%s)", p.Username, p.SteamID)
 			s.Rcon.Say(say)
+
+			stopRepTimeout[s.LobbyId] <- struct{}{}
+			return
 		}
 	} else {
 		say := fmt.Sprintf("Reporting %s (%s): %d/7 votes",
