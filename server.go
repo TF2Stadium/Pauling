@@ -107,8 +107,6 @@ func (s *Server) StartVerifier(ticker *time.Ticker) {
 		PushEvent(EventDisconectedFromServer, s.LobbyId)
 		return
 	}
-	// run config
-	s.ExecConfig()
 	s.ServerListener = RconListener.CreateServerListener(s.Rcon)
 	go s.LogListener()
 
@@ -236,6 +234,9 @@ func (s *Server) Setup() error {
 	if mapErr != nil {
 		return mapErr
 	}
+
+	// run config
+	s.ExecConfig()
 
 	return nil
 }
