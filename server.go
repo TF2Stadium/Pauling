@@ -99,6 +99,7 @@ func (s *Server) StartVerifier(ticker *time.Ticker) {
 	s.Rcon.Close()
 	s.Rcon, err = TF2RconWrapper.NewTF2RconConnection(s.Info.Host, s.Info.RconPassword)
 	for err != nil && count != 5 {
+		time.Sleep(1 * time.Second)
 		Logger.Critical(err.Error())
 		count++
 		s.Rcon, err = TF2RconWrapper.NewTF2RconConnection(s.Info.Host, s.Info.RconPassword)
