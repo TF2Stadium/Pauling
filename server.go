@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -54,6 +55,8 @@ type Server struct {
 
 	Rcon *TF2RconWrapper.TF2RconConnection
 	Info models.ServerRecord
+
+	log *log.Logger
 }
 
 func NewServer() *Server {
@@ -108,8 +111,6 @@ func (s *Server) StartVerifier(ticker *time.Ticker) {
 		PushEvent(EventDisconectedFromServer, s.LobbyId)
 		return
 	}
-	s.ServerListener = RconListener.CreateServerListener(s.Rcon)
-	go s.LogListener()
 
 	for {
 		select {
@@ -236,15 +237,24 @@ func (s *Server) Setup() error {
 	}
 	f.Close()
 
+	s.ServerListener = RconListener.CreateServerListener(s.Rcon)
+	go s.LogListener()
+
 	// change map
 	mapErr := s.Rcon.ChangeMap(s.Map)
 
 	if mapErr != nil {
+		s.StopVerifier <- struct{}{}
 		return mapErr
 	}
 
 	// run config
-	s.ExecConfig()
+	err = s.ExecConfig()
+	if err != nil {
+		s.StopVerifier <- struct{}{}
+		return err
+
+	}
 
 	return nil
 }
@@ -261,10 +271,8 @@ func (s *Server) ExecConfig() error {
 	}
 
 	err = ExecFile(filePath, s.Rcon)
-	if err != nil {
-		return err
-	}
-	return nil
+
+	return err
 }
 
 // runs each 10 sec
