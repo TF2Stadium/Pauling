@@ -281,6 +281,13 @@ func (s *Server) ExecConfig() error {
 
 	err = ExecFile(filePath, s.Rcon)
 
+	if s.Type != models.LobbyTypeDebug {
+		err = ExecFile("after_format.cfg", s.Rcon)
+		if err != nil {
+			return err
+		}
+	}
+
 	return err
 }
 
