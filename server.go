@@ -180,7 +180,11 @@ func (s *Server) Setup() error {
 
 	Logger.Debug("#%d: Connecting to %s", s.LobbyId, s.Info.Host)
 
-	s.Rcon, _ = TF2RconWrapper.NewTF2RconConnection(s.Info.Host, s.Info.RconPassword)
+	var err error
+	s.Rcon, err = TF2RconWrapper.NewTF2RconConnection(s.Info.Host, s.Info.RconPassword)
+	if err != nil {
+		return err
+	}
 
 	// kick players
 	Logger.Debug("#%d: Kicking all players", s.LobbyId)
@@ -192,7 +196,7 @@ func (s *Server) Setup() error {
 
 	Logger.Debug("#%d: Setting whitelist, changing map", s.LobbyId)
 	// whitelist
-	_, err := s.Rcon.Query(fmt.Sprintf("tftrue_whitelist_id %d", s.Whitelist))
+	_, err = s.Rcon.Query(fmt.Sprintf("tftrue_whitelist_id %d", s.Whitelist))
 	if err == TF2RconWrapper.UnknownCommandError {
 		var whitelist string
 
@@ -303,29 +307,9 @@ func (s *Server) IsPlayerInServer(playerCommId string) (bool, error) {
 }
 
 func (s *Server) KickAll() error {
-	var err error
+	_, err := s.Rcon.Query("kickall")
 
-	s.Players.Lock()
-	s.Players.Slice, err = s.Rcon.GetPlayers()
-
-	for err != nil {
-		time.Sleep(time.Second)
-		Logger.Critical("%d: Failed to get players in  %s: %s", s.LobbyId, err.Error())
-		s.Players.Slice, err = s.Rcon.GetPlayers()
-	}
-	s.Players.Unlock()
-
-	s.Players.RLock()
-	defer s.Players.RUnlock()
-	for _, player := range s.Players.Slice {
-		kickErr := s.Rcon.KickPlayer(player, "[tf2stadium.com]: Setting up lobby...")
-
-		if kickErr != nil {
-			return kickErr
-		}
-	}
-
-	return nil
+	return err
 }
 
 func (s *Server) IsPlayerAllowed(commId string) bool {
