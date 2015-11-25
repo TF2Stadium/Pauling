@@ -48,8 +48,12 @@ func ExecFile(path string, rcon *rcon.TF2RconConnection) error {
 
 	lines := strings.Split(string(data), "\n")
 
+	var config string
 	for _, line := range lines {
-		rcon.Query(line)
+		config += line + "; "
 	}
+
+	Logger.Debug(config)
+	rcon.Query(config)
 	return nil
 }
