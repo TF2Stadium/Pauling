@@ -265,9 +265,13 @@ func (s *Server) Setup() error {
 }
 
 func (s *Server) ExecConfig() error {
-	filePath := ConfigName(s.Map, s.Type, s.League)
-
 	var err error
+
+	filePath, err := ConfigName(s.Map, s.Type, s.League)
+	if err != nil {
+		return err
+	}
+
 	if s.Type != models.LobbyTypeDebug {
 		err = ExecFile("base.cfg", s.Rcon)
 		if err != nil {
