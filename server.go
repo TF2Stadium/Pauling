@@ -136,6 +136,7 @@ func (s *Server) LogListener() {
 	//is what Helen uses (and is sent in RPC calls)
 	for {
 		message := <-s.ServerListener.Messages
+		Logger.Debug(message.Message)
 
 		switch message.Parsed.Type {
 		case TF2RconWrapper.WorldGameOver:
@@ -144,6 +145,7 @@ func (s *Server) LogListener() {
 			return
 		case TF2RconWrapper.PlayerGlobalMessage:
 			text := message.Parsed.Data.Text
+			Logger.Debug("GLOBAL %s:", text)
 			if strings.HasPrefix(text, "!rep") {
 				s.report(message.Parsed.Data)
 			} else if strings.HasPrefix(text, "!sub") {
