@@ -1,9 +1,11 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/TF2Stadium/Helen/models"
@@ -19,7 +21,14 @@ var formatMap = map[models.LobbyType]string{
 	models.LobbyTypeDebug:      "debug",
 }
 
-func ConfigName(mapName string, lobbyType models.LobbyType, ruleset string) string {
+var rMapName = regexp.MustCompile(`(.+)_(.+)`)
+var ErrInvalidMap = errors.New("Invalid Map Name.")
+
+func ConfigName(mapName string, lobbyType models.LobbyType, ruleset string) (string, error) {
+	if !rMapName.MatchString(mapName) {
+		return "", ErrInvalidMap
+	}
+
 	mapType := mapName[:strings.Index(mapName, "_")]
 	formatString := formatMap[lobbyType]
 
@@ -28,7 +37,7 @@ func ConfigName(mapName string, lobbyType models.LobbyType, ruleset string) stri
 	}
 
 	file := fmt.Sprintf("%s/%s_%s.cfg", ruleset, mapType, formatString)
-	return file
+	return file, nil
 }
 
 //Execute file located at path on rcon

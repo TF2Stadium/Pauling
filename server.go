@@ -228,7 +228,12 @@ func (s *Server) Setup() error {
 		s.Rcon.Query("mp_tournament_whitelist " + whitelist)
 	}
 
-	filePath, _ := filepath.Abs("./configs/" + ConfigName(s.Map, s.Type, s.League))
+	name, err := ConfigName(s.Map, s.Type, s.League)
+	if err != nil {
+		return err
+	}
+
+	filePath, _ := filepath.Abs("./configs/" + name)
 
 	f, err := os.Open(filePath)
 	if err != nil {
