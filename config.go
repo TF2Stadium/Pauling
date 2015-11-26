@@ -53,7 +53,7 @@ func ExecFile(path string, rcon *rcon.TF2RconConnection) error {
 		config += line + "; "
 	}
 
-	Logger.Debug(config)
-	rcon.Query(config)
-	return nil
+	_, err := rcon.Query(config)
+
+	return err
 }
