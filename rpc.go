@@ -92,6 +92,25 @@ func (_ *Pauling) SetupServer(args *models.Args, nop *Noreply) error {
 	return nil
 }
 
+func (*Pauling) ReExecConfig(args *models.Args, nop *Noreply) error {
+	serverMap.RLock()
+	s, ok := serverMap.Map[args.Id]
+	serverMap.RUnlock()
+
+	if !ok {
+		return ErrNoServer
+	}
+
+	err := s.ExecConfig()
+	if err != nil {
+		return err
+	}
+
+	err = s.Rcon.ChangeMap(s.Map)
+
+	return err
+}
+
 func (_ *Pauling) End(args *models.Args, nop *Noreply) error {
 	s, err := getServer(args.Id)
 	if err != nil {
