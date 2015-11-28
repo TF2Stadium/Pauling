@@ -122,7 +122,7 @@ func (s *Server) StartVerifier(ticker *time.Ticker) {
 			}
 		case <-s.StopVerifier:
 			Logger.Debug("Stopping logger for lobby %d", s.LobbyId)
-			s.Rcon.Query("[tf2stadium.com] Lobby Ended.")
+			s.Rcon.Say("[tf2stadium.com] Lobby Ended.")
 			ticker.Stop()
 			RconListener.Close(s.Rcon)
 			s.Rcon.Close()
@@ -294,8 +294,14 @@ func (s *Server) ExecConfig() error {
 // runs each 10 sec
 func (s *Server) Verify() bool {
 	//Logger.Debug("#%d: Verifying %s...", s.LobbyId, s.Info.Host)
-	var err = s.Rcon.ChangeServerPassword(s.Info.ServerPassword)
+	password, err := s.Rcon.GetServerPassword()
+	if err != nil {
+		if password == s.Info.ServerPassword {
+			return true
+		}
+	}
 
+	err = s.Rcon.ChangeServerPassword(s.Info.ServerPassword)
 	retries := 0
 	for err != nil { //TODO: Stop connection after x retries
 		if retries == 6 {
