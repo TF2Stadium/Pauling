@@ -29,11 +29,6 @@ type Server struct {
 
 	PrevConnected map[string]bool
 
-	Players struct {
-		Slice []TF2RconWrapper.Player
-		*sync.RWMutex
-	}
-
 	AllowedPlayers struct {
 		Map map[string]bool
 		*sync.RWMutex
@@ -61,11 +56,6 @@ type Server struct {
 
 func NewServer() *Server {
 	s := &Server{
-		Players: struct {
-			Slice []TF2RconWrapper.Player
-			*sync.RWMutex
-		}{make([]TF2RconWrapper.Player, 4), new(sync.RWMutex)},
-
 		AllowedPlayers: struct {
 			Map map[string]bool
 			*sync.RWMutex
@@ -142,7 +132,7 @@ func (s *Server) LogListener() {
 		switch message.Parsed.Type {
 		case TF2RconWrapper.WorldGameOver:
 			PushEvent(EventMatchEnded, s.LobbyId)
-			close(s.StopVerifier)
+			s.StopVerifier <- struct{}{}
 			return
 		case TF2RconWrapper.PlayerGlobalMessage:
 			text := message.Parsed.Data.Text
@@ -317,26 +307,6 @@ func (s *Server) Verify() bool {
 	return true
 }
 
-// check if the given commId is in the server
-func (s *Server) IsPlayerInServer(playerCommId string) (bool, error) {
-	s.Players.RLock()
-	defer s.Players.RUnlock()
-
-	for _, player := range s.Players.Slice {
-		commId, idErr := steamid.SteamIdToCommId(player.SteamID)
-
-		if idErr != nil {
-			return false, idErr
-		}
-
-		if playerCommId == commId {
-			return true, nil
-		}
-	}
-
-	return false, nil
-}
-
 func (s *Server) KickAll() error {
 	_, err := s.Rcon.Query("kickall")
 
@@ -358,9 +328,6 @@ var rReport = regexp.MustCompile(`^!rep\s+(.+)\s+(.+)`)
 var stopRepTimeout = make(map[uint](chan struct{}))
 
 func (s *Server) report(data TF2RconWrapper.PlayerData) {
-	s.Players.RLock()
-	defer s.Players.RUnlock()
-
 	var team string
 	matches := rReport.FindStringSubmatch(data.Text)
 	if len(matches) != 3 {
@@ -423,8 +390,9 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 
 	if repped {
 		PushEvent(EventSubstitute, steamid, s.LobbyId)
+		players, _ := s.Rcon.GetPlayers()
 
-		for _, p := range s.Players.Slice {
+		for _, p := range players {
 			player = p
 			say := fmt.Sprintf("Reported player %s (%s)", p.Username, p.SteamID)
 			s.Rcon.Say(say)
