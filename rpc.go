@@ -118,7 +118,7 @@ func (_ *Pauling) End(args *models.Args, nop *Noreply) error {
 	}
 
 	//now := time.Now().Unix()
-	close(s.StopVerifier)
+	s.StopVerifier <- struct{}{}
 	//Logger.Debug("%d", time.Now().Unix()-now)
 
 	return nil
