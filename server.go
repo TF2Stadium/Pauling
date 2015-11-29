@@ -108,6 +108,7 @@ func (s *Server) StartVerifier(ticker *time.Ticker) {
 			if !s.Verify() {
 				ticker.Stop()
 				s.Rcon.Close()
+				deleteServer(s.LobbyId)
 				return
 			}
 		case <-s.StopVerifier:
