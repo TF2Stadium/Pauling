@@ -38,6 +38,12 @@ func setServer(id uint, s *Server) {
 	serverMap.Unlock()
 }
 
+func deleteServer(id uint) {
+	serverMap.Lock()
+	delete(serverMap.Map, id)
+	serverMap.Unlock()
+}
+
 func (_ *Pauling) VerifyInfo(info *models.ServerRecord, nop *Noreply) error {
 	c, err := rconwrapper.NewTF2RconConnection(info.Host, info.RconPassword)
 	if c != nil {
@@ -117,6 +123,7 @@ func (_ *Pauling) End(args *models.Args, nop *Noreply) error {
 		return ErrNoServer
 	}
 
+	deleteServer(s.LobbyId)
 	//now := time.Now().Unix()
 	s.StopVerifier <- struct{}{}
 	//Logger.Debug("%d", time.Now().Unix()-now)

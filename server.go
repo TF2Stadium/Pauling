@@ -116,6 +116,7 @@ func (s *Server) StartVerifier(ticker *time.Ticker) {
 			ticker.Stop()
 			RconListener.Close(s.Rcon)
 			s.Rcon.Close()
+			deleteServer(s.LobbyId)
 			return
 		}
 	}
