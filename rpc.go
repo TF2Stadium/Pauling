@@ -85,6 +85,7 @@ func (_ *Pauling) SetupServer(args *models.Args, nop *Noreply) error {
 	err := s.Setup()
 	if err != nil {
 		//Logger.Warning(err.Error())
+		Logger.Debug("#%d: Error while setting up: %s", args.Id, err.Error())
 		return err
 	}
 

@@ -188,7 +188,7 @@ func (s *Server) Setup() error {
 		return kickErr
 	}
 
-	Logger.Debug("#%d: Setting whitelist, changing map", s.LobbyId)
+	Logger.Debug("#%d: Setting whitelist", s.LobbyId)
 	// whitelist
 	_, err = s.Rcon.Query(fmt.Sprintf("tftrue_whitelist_id %d", s.Whitelist))
 	if err == TF2RconWrapper.UnknownCommandError {
@@ -234,25 +234,26 @@ func (s *Server) Setup() error {
 	}
 	f.Close()
 
-	s.ServerListener = RconListener.CreateServerListener(s.Rcon)
-	go s.LogListener()
-
-	// change map
-	mapErr := s.Rcon.ChangeMap(s.Map)
-
-	if mapErr != nil {
-		s.StopVerifier <- struct{}{}
-		return mapErr
-	}
-
-	// run config
+	Logger.Debug("#%d: Executing config.", s.LobbyId)
 	err = s.ExecConfig()
 	if err != nil {
-		s.StopVerifier <- struct{}{}
 		return err
 
 	}
 
+	Logger.Debug("#%d: Creating listener", s.LobbyId)
+	s.ServerListener = RconListener.CreateServerListener(s.Rcon)
+	go s.LogListener()
+
+	// change map,
+	Logger.Debug("#%d: Changing Map", s.LobbyId)
+	mapErr := s.Rcon.ChangeMap(s.Map)
+
+	if mapErr != nil {
+		return mapErr
+	}
+
+	Logger.Debug("#%d: Configured", s.LobbyId)
 	return nil
 }
 
