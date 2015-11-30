@@ -5,6 +5,13 @@ machine:
     DATABASE_NAME: "circle_test"
     DATABASE_USERNAME: "ubuntu"
     DATABASE_PASSWORD: ""
+dependencies:
+  pre:
+      - sudo rm -rf /usr/local/go
+      - wget "https://godeb.s3.amazonaws.com/godeb-amd64.tar.gz"
+      - tar -xvf "godeb-amd64.tar.gz"
+      - ./godeb install
+      - go version
 deployment:
   master:
     branch: master
