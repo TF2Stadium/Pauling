@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/TF2Stadium/Helen/models"
-	rcon "github.com/TF2Stadium/TF2RconWrapper"
+	tf2rcon "github.com/TF2Stadium/TF2RconWrapper"
 )
 
 var formatMap = map[models.LobbyType]string{
@@ -42,7 +42,7 @@ func ConfigName(mapName string, lobbyType models.LobbyType, ruleset string) (str
 
 //Execute file located at path on rcon
 //TODO: Shouldn't this be in TF2RconWrapper?
-func ExecFile(path string, rcon *rcon.TF2RconConnection) error {
+func ExecFile(path string, rcon *tf2rcon.TF2RconConnection) error {
 	configPath, _ := filepath.Abs("./configs/")
 	data, _ := ioutil.ReadFile(configPath + "/" + path)
 
@@ -50,10 +50,21 @@ func ExecFile(path string, rcon *rcon.TF2RconConnection) error {
 
 	var config string
 	for _, line := range lines {
+		if len(config+line) > 1024-10 {
+			str, err := rcon.Query(config)
+			if err != nil {
+				return errors.New(str)
+			}
+			config = ""
+		}
 		config += line + "; "
 	}
 
-	_, err := rcon.Query(config)
+	Logger.Debug(config)
+	str, err := rcon.Query(config)
+	if err != nil {
+		return errors.New(str)
+	}
+	return nil
 
-	return err
 }
