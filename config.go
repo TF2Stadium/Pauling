@@ -51,9 +51,9 @@ func ExecFile(path string, rcon *tf2rcon.TF2RconConnection) error {
 	var config string
 	for _, line := range lines {
 		if len(config+line) > 1024-10 {
-			str, err := rcon.Query(config)
+			_, err := rcon.Query(config)
 			if err != nil {
-				return errors.New(str)
+				return err
 			}
 			config = ""
 		}

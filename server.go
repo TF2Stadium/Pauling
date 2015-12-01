@@ -191,7 +191,7 @@ func (s *Server) Setup() error {
 	Logger.Debug("#%d: Setting whitelist", s.LobbyId)
 	// whitelist
 	_, err = s.Rcon.Query(fmt.Sprintf("tftrue_whitelist_id %d", s.Whitelist))
-	if err == TF2RconWrapper.UnknownCommandError {
+	if err == TF2RconWrapper.ErrUnknownCommand {
 		var whitelist string
 
 		switch s.Whitelist {
@@ -234,13 +234,6 @@ func (s *Server) Setup() error {
 	}
 	f.Close()
 
-	Logger.Debug("#%d: Executing config.", s.LobbyId)
-	err = s.ExecConfig()
-	if err != nil {
-		return err
-
-	}
-
 	Logger.Debug("#%d: Creating listener", s.LobbyId)
 	s.ServerListener = RconListener.CreateServerListener(s.Rcon)
 	go s.LogListener()
@@ -251,6 +244,13 @@ func (s *Server) Setup() error {
 
 	if mapErr != nil {
 		return mapErr
+	}
+
+	Logger.Debug("#%d: Executing config.", s.LobbyId)
+	err = s.ExecConfig()
+	if err != nil {
+		return err
+
 	}
 
 	Logger.Debug("#%d: Configured", s.LobbyId)
