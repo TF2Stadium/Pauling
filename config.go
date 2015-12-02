@@ -60,7 +60,6 @@ func ExecFile(path string, rcon *tf2rcon.TF2RconConnection) error {
 		config += line + "; "
 	}
 
-	Logger.Debug(config)
 	str, err := rcon.Query(config)
 	if err != nil {
 		return errors.New(str)
