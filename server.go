@@ -44,6 +44,11 @@ type Server struct {
 		*sync.RWMutex
 	}
 
+	PlayersRep struct {
+		Map map[string]bool
+		*sync.RWMutex
+	}
+
 	StopVerifier chan struct{}
 
 	ServerListener *TF2RconWrapper.ServerListener
@@ -70,6 +75,12 @@ func NewServer() *Server {
 			Map map[string]string
 			*sync.RWMutex
 		}{make(map[string]string), new(sync.RWMutex)},
+
+		PlayersRep: struct {
+			Map map[string]bool
+			*sync.RWMutex
+		}{make(map[string]bool), new(sync.RWMutex)},
+
 		StopVerifier: make(chan struct{}),
 	}
 
@@ -327,8 +338,18 @@ func (s *Server) IsPlayerAllowed(commId string) bool {
 	return false
 }
 
-var rReport = regexp.MustCompile(`^!rep\s+(.+)\s+(.+)`)
-var stopRepTimeout = make(map[uint](chan struct{}))
+var (
+	rReport        = regexp.MustCompile(`^!rep\s+(.+)\s+(.+)`)
+	stopRepTimeout = make(map[uint](chan struct{}))
+
+	repsNeeded = map[models.LobbyType]int{
+		models.LobbyTypeSixes:      7,
+		models.LobbyTypeHighlander: 7,
+		models.LobbyTypeFours:      5,
+		models.LobbyTypeBball:      3,
+		models.LobbyTypeUltiduo:    3,
+	}
+)
 
 func (s *Server) report(data TF2RconWrapper.PlayerData) {
 	var team string
@@ -350,6 +371,12 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 	}
 
 	slot := team + matches[2]
+	s.PlayersRep.RLock()
+	if s.PlayersRep.Map[data.SteamId+slot] {
+		s.PlayersRep.RUnlock()
+		return
+	}
+	s.PlayersRep.RUnlock()
 
 	s.Slots.RLock()
 	steamid, ok := s.Slots.Map[slot]
@@ -358,11 +385,10 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 		return
 	}
 
-	var repped bool
 	s.Reps.Lock()
 	s.Reps.Map[steamid]++
 	votes := s.Reps.Map[steamid]
-	repped = (s.Reps.Map[steamid] == 7)
+	repped := (s.Reps.Map[steamid] == repsNeeded[s.Type])
 	if repped {
 		s.Reps.Map[steamid] = 0
 	}
@@ -401,11 +427,21 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 			s.Rcon.Say(say)
 
 			stopRepTimeout[s.LobbyId] <- struct{}{}
-			return
+			close(stopRepTimeout[s.LobbyId])
+			s.PlayersRep.Lock()
+			s.PlayersRep.Map[data.SteamId+slot] = false
+			s.PlayersRep.Unlock()
+			break
 		}
 	} else {
-		say := fmt.Sprintf("Reporting %s (%s): %d/7 votes",
-			player.Username, player.SteamID, votes)
+		say := fmt.Sprintf("Reporting %s (%s): %d/%d votes",
+			player.Username, player.SteamID, votes, repsNeeded[s.Type])
 		s.Rcon.Say(say)
+		s.PlayersRep.Lock()
+		s.PlayersRep.Map[data.SteamId+slot] = true
+		s.PlayersRep.Unlock()
+
 	}
+
+	return
 }
