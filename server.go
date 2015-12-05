@@ -299,7 +299,7 @@ func (s *Server) ExecConfig() error {
 func (s *Server) Verify() bool {
 	//Logger.Debug("#%d: Verifying %s...", s.LobbyId, s.Info.Host)
 	password, err := s.Rcon.GetServerPassword()
-	if err != nil {
+	if err == nil {
 		if password == s.Info.ServerPassword {
 			return true
 		}

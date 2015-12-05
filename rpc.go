@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"net"
 	"sync"
 
 	"github.com/TF2Stadium/Helen/models"
@@ -48,6 +49,14 @@ func (_ *Pauling) VerifyInfo(info *models.ServerRecord, nop *Noreply) error {
 	c, err := rconwrapper.NewTF2RconConnection(info.Host, info.RconPassword)
 	if c != nil {
 		c.Close()
+	}
+	if err != nil {
+		switch err.(type) {
+		case *net.OpError:
+			if err.(*net.OpError).Timeout() {
+				return errors.New("Couldn't connect to the server: Connection timed out.")
+			}
+		}
 	}
 	return err
 }
