@@ -344,6 +344,7 @@ var (
 
 	repsNeeded = map[models.LobbyType]int{
 		models.LobbyTypeSixes:      7,
+		models.LobbyTypeDebug:      1,
 		models.LobbyTypeHighlander: 7,
 		models.LobbyTypeFours:      5,
 		models.LobbyTypeBball:      3,
@@ -351,8 +352,19 @@ var (
 	}
 )
 
+func (s *Server) clearReps(slot string) {
+	s.PlayersRep.Lock()
+	for entry, _ := range s.PlayersRep.Map {
+		if strings.HasSuffix(entry, slot) {
+			delete(s.PlayersRep.Map, entry)
+		}
+	}
+	s.PlayersRep.Unlock()
+}
+
 func (s *Server) report(data TF2RconWrapper.PlayerData) {
 	var team string
+
 	matches := rReport.FindStringSubmatch(data.Text)
 	if len(matches) != 3 {
 		return
@@ -370,6 +382,10 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 		}
 	}
 
+	if team == "blue" {
+		team = "blu"
+	}
+
 	slot := team + matches[2]
 	s.PlayersRep.RLock()
 	if s.PlayersRep.Map[data.SteamId+slot] {
@@ -382,6 +398,7 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 	steamid, ok := s.Slots.Map[slot]
 	s.Slots.RUnlock()
 	if !ok {
+		log.Printf("%s doesn't exist\n", slot)
 		return
 	}
 
@@ -407,6 +424,7 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 					s.Reps.Map[steamid] = 0
 					s.Reps.Unlock()
 					s.Rcon.Say("Not sufficient votes after 1 minute, player not reported.")
+					s.clearReps(slot)
 					return
 				case <-c:
 					return
@@ -416,24 +434,22 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 	}
 
 	var player TF2RconWrapper.Player
+	players, _ := s.Rcon.GetPlayers()
+	for _, p := range players {
+		player = p
+	}
 
 	if repped {
 		PushEvent(EventSubstitute, steamid, s.LobbyId)
-		players, _ := s.Rcon.GetPlayers()
 
-		for _, p := range players {
-			player = p
-			say := fmt.Sprintf("Reported player %s (%s)", p.Username, p.SteamID)
-			s.Rcon.Say(say)
+		say := fmt.Sprintf("Reported player %s (%s)", player.Username, player.SteamID)
+		s.Rcon.Say(say)
+		stopRepTimeout[s.LobbyId] <- struct{}{}
+		close(stopRepTimeout[s.LobbyId])
+		s.clearReps(slot)
 
-			stopRepTimeout[s.LobbyId] <- struct{}{}
-			close(stopRepTimeout[s.LobbyId])
-			s.PlayersRep.Lock()
-			s.PlayersRep.Map[data.SteamId+slot] = false
-			s.PlayersRep.Unlock()
-			break
-		}
 	} else {
+
 		say := fmt.Sprintf("Reporting %s (%s): %d/%d votes",
 			player.Username, player.SteamID, votes, repsNeeded[s.Type])
 		s.Rcon.Say(say)

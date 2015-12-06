@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/TF2Stadium/Helen/models"
+	"github.com/TF2Stadium/PlayerStatsScraper/steamid"
 	rconwrapper "github.com/TF2Stadium/TF2RconWrapper"
 )
 
@@ -148,7 +149,8 @@ func (_ *Pauling) AllowPlayer(args *models.Args, nop *Noreply) error {
 	s.AllowedPlayers.Unlock()
 
 	s.Slots.Lock()
-	s.Slots.Map[args.Slot] = args.SteamId
+	id, _ := steamid.CommIdToSteamId(args.SteamId)
+	s.Slots.Map[args.Slot] = id
 	s.Slots.Unlock()
 
 	return nil
@@ -169,8 +171,9 @@ func (_ *Pauling) DisallowPlayer(args *models.Args, nop *Noreply) error {
 	delete(s.AllowedPlayers.Map, args.SteamId)
 
 	s.Slots.Lock()
+	id, _ := steamid.CommIdToSteamId(args.SteamId)
 	for slot, steamID := range s.Slots.Map {
-		if steamID == args.SteamId {
+		if steamID == id {
 			delete(s.Slots.Map, slot)
 		}
 	}
