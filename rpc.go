@@ -60,7 +60,7 @@ func (_ *Pauling) VerifyInfo(info *models.ServerRecord, nop *Noreply) error {
 			select {
 			case <-tick:
 				err <- errors.New("Server doesn't support log redirection. Make sure your server isn't blocking outgoing logs.")
-			case m := <-listener.Messages:
+			case <-listener.Messages:
 				RconListener.Close(c)
 				err <- nil
 			}
