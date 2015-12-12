@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net"
 	"sync"
+	"time"
 
 	"github.com/TF2Stadium/Helen/models"
 	"github.com/TF2Stadium/PlayerStatsScraper/steamid"
@@ -49,7 +50,24 @@ func deleteServer(id uint) {
 func (_ *Pauling) VerifyInfo(info *models.ServerRecord, nop *Noreply) error {
 	c, err := rconwrapper.NewTF2RconConnection(info.Host, info.RconPassword)
 	if c != nil {
-		c.Close()
+		defer c.Close()
+
+		listener := RconListener.CreateServerListener(c)
+		tick := time.After(time.Second * 5)
+		err := make(chan error)
+
+		go func() {
+			select {
+			case <-tick:
+				err <- errors.New("Server doesn't support log redirection. Make sure your server isn't blocking outgoing logs.")
+			case m := <-listener.Messages:
+				RconListener.Close(c)
+				err <- nil
+			}
+		}()
+		c.Query("status")
+
+		return <-err
 	}
 	if err != nil {
 		switch err.(type) {
