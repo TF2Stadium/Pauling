@@ -49,7 +49,8 @@ type Server struct {
 		*sync.RWMutex
 	}
 
-	StopVerifier chan struct{}
+	StopVerifier    chan struct{}
+	StopLogListener chan struct{}
 
 	ServerListener *TF2RconWrapper.ServerListener
 
@@ -81,7 +82,8 @@ func NewServer() *Server {
 			*sync.RWMutex
 		}{make(map[string]bool), new(sync.RWMutex)},
 
-		StopVerifier: make(chan struct{}),
+		StopVerifier:    make(chan struct{}),
+		StopLogListener: make(chan struct{}),
 	}
 
 	return s
@@ -126,7 +128,7 @@ func (s *Server) StartVerifier(ticker *time.Ticker) {
 			Logger.Debug("Stopping logger for lobby %d", s.LobbyId)
 			s.Rcon.Say("[tf2stadium.com] Lobby Ended.")
 			ticker.Stop()
-			RconListener.Close(s.Rcon)
+			RconListener.Close(s.Rcon, s.ServerListener)
 			s.Rcon.Close()
 			deleteServer(s.LobbyId)
 			return
@@ -139,40 +141,45 @@ func (s *Server) LogListener() {
 	//We convert these into a 64-bit Steam Community ID, which
 	//is what Helen uses (and is sent in RPC calls)
 	for {
-		message := <-s.ServerListener.Messages
-		//Logger.Debug(message.Message)
+		select {
+		case message := <-s.ServerListener.Messages:
+			//Logger.Debug(message.Message)
 
-		switch message.Parsed.Type {
-		case TF2RconWrapper.WorldGameOver:
-			PushEvent(EventMatchEnded, s.LobbyId)
+			switch message.Parsed.Type {
+			case TF2RconWrapper.WorldGameOver:
+				PushEvent(EventMatchEnded, s.LobbyId)
+				s.StopVerifier <- struct{}{}
+				return
+			case TF2RconWrapper.PlayerGlobalMessage:
+				text := message.Parsed.Data.Text
+				//Logger.Debug("GLOBAL %s:", text)
+
+				if strings.HasPrefix(text, "!rep") {
+					s.report(message.Parsed.Data)
+				} else if strings.HasPrefix(text, "!sub") {
+					commID, _ := steamid.SteamIdToCommId(message.Parsed.Data.SteamId)
+					PushEvent(EventSubstitute, s.LobbyId, commID)
+					say := fmt.Sprintf("Reporting player %s (%s)",
+						message.Parsed.Data.Username, message.Parsed.Data.SteamId)
+					s.Rcon.Say(say)
+				}
+			case TF2RconWrapper.WorldPlayerConnected:
+				commID, _ := steamid.SteamIdToCommId(message.Parsed.Data.SteamId)
+				if s.IsPlayerAllowed(commID) {
+					PushEvent(EventPlayerConnected, s.LobbyId, commID)
+				} else {
+					s.Rcon.KickPlayerID(message.Parsed.Data.UserId,
+						"[tf2stadium.com] You're not in the lobby...")
+				}
+			case TF2RconWrapper.WorldPlayerDisconnected:
+				commID, _ := steamid.SteamIdToCommId(message.Parsed.Data.SteamId)
+				if s.IsPlayerAllowed(commID) {
+					PushEvent(EventPlayerConnected, s.LobbyId, commID)
+				}
+			}
+		case <-s.StopLogListener:
 			s.StopVerifier <- struct{}{}
 			return
-		case TF2RconWrapper.PlayerGlobalMessage:
-			text := message.Parsed.Data.Text
-			//Logger.Debug("GLOBAL %s:", text)
-
-			if strings.HasPrefix(text, "!rep") {
-				s.report(message.Parsed.Data)
-			} else if strings.HasPrefix(text, "!sub") {
-				commID, _ := steamid.SteamIdToCommId(message.Parsed.Data.SteamId)
-				PushEvent(EventSubstitute, s.LobbyId, commID)
-				say := fmt.Sprintf("Reporting player %s (%s)",
-					message.Parsed.Data.Username, message.Parsed.Data.SteamId)
-				s.Rcon.Say(say)
-			}
-		case TF2RconWrapper.WorldPlayerConnected:
-			commID, _ := steamid.SteamIdToCommId(message.Parsed.Data.SteamId)
-			if s.IsPlayerAllowed(commID) {
-				PushEvent(EventPlayerConnected, s.LobbyId, commID)
-			} else {
-				s.Rcon.KickPlayerID(message.Parsed.Data.UserId,
-					"[tf2stadium.com] You're not in the lobby...")
-			}
-		case TF2RconWrapper.WorldPlayerDisconnected:
-			commID, _ := steamid.SteamIdToCommId(message.Parsed.Data.SteamId)
-			if s.IsPlayerAllowed(commID) {
-				PushEvent(EventPlayerConnected, s.LobbyId, commID)
-			}
 		}
 
 	}

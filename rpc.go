@@ -55,7 +55,7 @@ func (_ *Pauling) VerifyInfo(info *models.ServerRecord, nop *Noreply) error {
 
 		c.Query("log on; sv_rcon_log 1; sv_logflush 1")
 		listener := RconListener.CreateServerListener(c)
-		defer RconListener.Close(c)
+		defer RconListener.Close(c, listener)
 
 		tick := time.After(time.Second * 5)
 		err := make(chan error)
@@ -157,7 +157,7 @@ func (_ *Pauling) End(args *models.Args, nop *Noreply) error {
 
 	deleteServer(s.LobbyId)
 	//now := time.Now().Unix()
-	s.StopVerifier <- struct{}{}
+	s.StopLogListener <- struct{}{}
 	//Logger.Debug("%d", time.Now().Unix()-now)
 
 	return nil
