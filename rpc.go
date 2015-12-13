@@ -52,6 +52,7 @@ func (_ *Pauling) VerifyInfo(info *models.ServerRecord, nop *Noreply) error {
 	if c != nil {
 		defer c.Close()
 
+		c.Query("log on; sv_rcon_log 1")
 		listener := RconListener.CreateServerListener(c)
 		tick := time.After(time.Second * 5)
 		err := make(chan error)
