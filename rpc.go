@@ -9,6 +9,7 @@ import (
 	"github.com/TF2Stadium/Helen/models"
 	"github.com/TF2Stadium/PlayerStatsScraper/steamid"
 	rconwrapper "github.com/TF2Stadium/TF2RconWrapper"
+	"github.com/james4k/rcon"
 )
 
 type Pauling int
@@ -54,6 +55,8 @@ func (_ *Pauling) VerifyInfo(info *models.ServerRecord, nop *Noreply) error {
 
 		c.Query("log on; sv_rcon_log 1; sv_logflush 1")
 		listener := RconListener.CreateServerListener(c)
+		defer RconListener.Close(c)
+
 		tick := time.After(time.Second * 5)
 		err := make(chan error)
 
@@ -62,7 +65,6 @@ func (_ *Pauling) VerifyInfo(info *models.ServerRecord, nop *Noreply) error {
 			case <-tick:
 				err <- errors.New("Server doesn't support log redirection. Make sure your server isn't blocking outgoing logs.")
 			case <-listener.Messages:
-				RconListener.Close(c)
 				err <- nil
 			}
 		}()
@@ -75,6 +77,10 @@ func (_ *Pauling) VerifyInfo(info *models.ServerRecord, nop *Noreply) error {
 		case *net.OpError:
 			if err.(*net.OpError).Timeout() {
 				return errors.New("Couldn't connect to the server: Connection timed out.")
+			}
+		default:
+			if err == rcon.ErrAuthFailed {
+				return errors.New("Authentication Failed. Please check your RCON Address/Password.")
 			}
 		}
 	}
