@@ -66,7 +66,7 @@ func (_ *Pauling) VerifyInfo(info *models.ServerRecord, nop *Noreply) error {
 				err <- nil
 			}
 		}()
-		c.Query("status")
+		c.Query("sv_password")
 
 		return <-err
 	}
