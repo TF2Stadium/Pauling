@@ -14,7 +14,10 @@ import (
 	rcon "github.com/TF2Stadium/TF2RconWrapper"
 )
 
-var RconListener *rcon.RconChatListener
+var (
+	RconListener     *rcon.RconChatListener
+	PrintLogMessages bool
+)
 
 func overrideFromEnv(constant *string, name string) {
 	val := os.Getenv(name)
@@ -49,6 +52,7 @@ func main() {
 	profilerPort := "6061"
 	overrideFromEnv(&profilerPort, "PROFILER_PORT")
 	overrideBoolFromEnv(&profilerEnable, "PROFILER_ENABLE")
+	overrideBoolFromEnv(&PrintLogMessages, "PRINT_LOG_MESSAGES")
 
 	if profilerEnable {
 		address := "localhost:" + profilerPort
