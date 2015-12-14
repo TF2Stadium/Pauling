@@ -55,7 +55,6 @@ func (_ *Pauling) VerifyInfo(info *models.ServerRecord, nop *Noreply) error {
 
 		c.Query("log on; sv_rcon_log 1; sv_logflush 1")
 		listener := RconListener.CreateServerListener(c)
-		defer RconListener.Close(c, listener)
 
 		tick := time.After(time.Second * 5)
 		err := make(chan error)
@@ -63,8 +62,10 @@ func (_ *Pauling) VerifyInfo(info *models.ServerRecord, nop *Noreply) error {
 		go func() {
 			select {
 			case <-tick:
+				listener.Close(c)
 				err <- errors.New("Server doesn't support log redirection. Make sure your server isn't blocking outgoing logs.")
-			case <-listener.Messages:
+			case <-listener.RawMessages:
+				listener.Close(c)
 				err <- nil
 			}
 		}()
