@@ -56,8 +56,6 @@ type Server struct {
 
 	Rcon *TF2RconWrapper.TF2RconConnection
 	Info models.ServerRecord
-
-	log *log.Logger
 }
 
 func NewServer() *Server {
@@ -128,7 +126,7 @@ func (s *Server) StartVerifier(ticker *time.Ticker) {
 			Logger.Debug("Stopping logger for lobby %d", s.LobbyId)
 			s.Rcon.Say("[tf2stadium.com] Lobby Ended.")
 			ticker.Stop()
-			RconListener.Close(s.Rcon, s.ServerListener)
+			s.ServerListener.Close(s.Rcon)
 			s.Rcon.Close()
 			deleteServer(s.LobbyId)
 			return
@@ -142,8 +140,16 @@ func (s *Server) LogListener() {
 	//is what Helen uses (and is sent in RPC calls)
 	for {
 		select {
-		case message := <-s.ServerListener.Messages:
+		case raw := <-s.ServerListener.RawMessages:
+			message, err := TF2RconWrapper.ParseMessage(raw)
+			if PrintLogMessages {
+				Logger.Debug(message.Message)
+			}
 			//Logger.Debug(message.Message)
+
+			if err != nil {
+				continue
+			}
 
 			switch message.Parsed.Type {
 			case TF2RconWrapper.WorldGameOver:
@@ -177,11 +183,12 @@ func (s *Server) LogListener() {
 					PushEvent(EventPlayerConnected, s.LobbyId, commID)
 				}
 			}
+
 		case <-s.StopLogListener:
 			s.StopVerifier <- struct{}{}
 			return
-		}
 
+		}
 	}
 }
 
@@ -402,19 +409,19 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 	s.PlayersRep.RUnlock()
 
 	s.Slots.RLock()
-	steamid, ok := s.Slots.Map[slot]
+	steamID, ok := s.Slots.Map[slot]
 	s.Slots.RUnlock()
 	if !ok {
-		log.Printf("%s doesn't exist\n", slot)
+		Logger.Debug("%s doesn't exist in map %v\n", slot, s.Slots.Map)
 		return
 	}
 
 	s.Reps.Lock()
-	s.Reps.Map[steamid]++
-	votes := s.Reps.Map[steamid]
-	repped := (s.Reps.Map[steamid] == repsNeeded[s.Type])
+	s.Reps.Map[steamID]++
+	votes := s.Reps.Map[steamID]
+	repped := (s.Reps.Map[steamID] == repsNeeded[s.Type])
 	if repped {
-		s.Reps.Map[steamid] = 0
+		s.Reps.Map[steamID] = 0
 	}
 	s.Reps.Unlock()
 
@@ -428,7 +435,7 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 				select {
 				case <-tick:
 					s.Reps.Lock()
-					s.Reps.Map[steamid] = 0
+					s.Reps.Map[steamID] = 0
 					s.Reps.Unlock()
 					s.Rcon.Say("Not sufficient votes after 1 minute, player not reported.")
 					s.clearReps(slot)
@@ -447,7 +454,8 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 	}
 
 	if repped {
-		PushEvent(EventSubstitute, steamid, s.LobbyId)
+		steamID, _ = steamid.SteamIdToCommId(steamID)
+		PushEvent(EventSubstitute, s.LobbyId, steamID)
 
 		say := fmt.Sprintf("Reported player %s (%s)", player.Username, player.SteamID)
 		s.Rcon.Say(say)
