@@ -59,7 +59,7 @@ func main() {
 		go func() {
 			Logger.Error(http.ListenAndServe(address, nil).Error())
 		}()
-		Logger.Debug("Running Profiler on %s", address)
+		Logger.Info("Running Profiler on %s", address)
 	}
 
 	pid := &pid.Instance{}
@@ -85,7 +85,7 @@ func main() {
 		Logger.Fatal(err)
 	}
 
-	Logger.Debug("Listening for server messages on %s:%s", ip, portRcon)
+	Logger.Info("Listening for server messages on %s:%s", ip, portRcon)
 	//PushEvent("getServers")
 	go func() {
 		for {
@@ -94,6 +94,6 @@ func main() {
 
 		}
 	}()
-	Logger.Debug("Listening on %s", port)
+	Logger.Info("Listening on %s", port)
 	Logger.Fatal(http.Serve(l, nil))
 }
