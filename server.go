@@ -179,7 +179,7 @@ func (s *Server) LogListener() {
 			case TF2RconWrapper.WorldPlayerDisconnected:
 				commID, _ := steamid.SteamIdToCommId(message.Parsed.Data.SteamId)
 				if s.IsPlayerAllowed(commID) {
-					PushEvent(EventPlayerConnected, s.LobbyId, commID)
+					PushEvent(EventPlayerDisconnected, s.LobbyId, commID)
 				}
 			}
 
