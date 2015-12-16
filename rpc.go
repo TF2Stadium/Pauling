@@ -2,8 +2,11 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"net"
-	"sync"
+	"net/http"
+	"net/rpc"
+	"syscall"
 	"time"
 
 	"github.com/TF2Stadium/Helen/models"
@@ -12,40 +15,23 @@ import (
 	"github.com/james4k/rcon"
 )
 
-type Pauling int
+type Pauling struct{}
 type Noreply struct{}
 
-var serverMap = struct {
-	Map map[uint]*Server
-	*sync.RWMutex
-}{make(map[uint]*Server), new(sync.RWMutex)}
+func startRPC() {
+	pauling := new(Pauling)
+	rpc.Register(pauling)
+	rpc.HandleHTTP()
 
-var ErrNoServer = errors.New("Server doesn't exist.")
+	port := "8001"
+	overrideFromEnv(&port, "PAULING_PORT")
 
-func getServer(id uint) (s *Server, err error) {
-	var exists bool
-
-	serverMap.RLock()
-	s, exists = serverMap.Map[id]
-	serverMap.RUnlock()
-
-	if !exists {
-		err = ErrNoServer
+	l, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%s", port))
+	if err != nil {
+		Logger.Fatal(err)
 	}
-
-	return
-}
-
-func setServer(id uint, s *Server) {
-	serverMap.Lock()
-	serverMap.Map[id] = s
-	serverMap.Unlock()
-}
-
-func deleteServer(id uint) {
-	serverMap.Lock()
-	delete(serverMap.Map, id)
-	serverMap.Unlock()
+	Logger.Info("Listening on %s", port)
+	Logger.Fatal(http.Serve(l, nil))
 }
 
 func (_ *Pauling) VerifyInfo(info *models.ServerRecord, nop *Noreply) error {
@@ -79,13 +65,20 @@ func (_ *Pauling) VerifyInfo(info *models.ServerRecord, nop *Noreply) error {
 			if err.(*net.OpError).Timeout() {
 				return errors.New("Couldn't connect to the server: Connection timed out.")
 			}
+		case syscall.Errno:
+			if err.(syscall.Errno) == syscall.ECONNREFUSED {
+				return errors.New("Couldn't connect to the server: Connection Refused.")
+			}
+			return err
+
 		default:
 			if err == rcon.ErrAuthFailed {
 				return errors.New("Authentication Failed. Please check your RCON Address/Password.")
 			}
+
 		}
 	}
-	return err
+	return errors.New("Couldn't connect to the server.")
 }
 
 func (_ *Pauling) SetupVerifier(args *models.ServerBootstrap, nop *Noreply) error {
@@ -104,7 +97,7 @@ func (_ *Pauling) SetupVerifier(args *models.ServerBootstrap, nop *Noreply) erro
 	for _, playerId := range args.Players {
 		s.AllowedPlayers.Map[playerId] = true
 	}
-	NewServerChan <- s
+	go s.StartVerifier(time.NewTicker(time.Second * 10))
 
 	return nil
 }
@@ -125,22 +118,19 @@ func (_ *Pauling) SetupServer(args *models.Args, nop *Noreply) error {
 		return err
 	}
 
-	NewServerChan <- s
+	go s.StartVerifier(time.NewTicker(time.Second * 10))
 
 	setServer(args.Id, s)
 	return nil
 }
 
 func (_ *Pauling) ReExecConfig(args *models.Args, nop *Noreply) error {
-	serverMap.RLock()
-	s, ok := serverMap.Map[args.Id]
-	serverMap.RUnlock()
-
-	if !ok {
-		return ErrNoServer
+	s, err := getServer(args.Id)
+	if err != nil {
+		return err
 	}
 
-	err := s.ExecConfig()
+	err = s.ExecConfig()
 	if err != nil {
 		return err
 	}
@@ -153,7 +143,7 @@ func (_ *Pauling) ReExecConfig(args *models.Args, nop *Noreply) error {
 func (_ *Pauling) End(args *models.Args, nop *Noreply) error {
 	s, err := getServer(args.Id)
 	if err != nil {
-		return ErrNoServer
+		return err
 	}
 
 	deleteServer(s.LobbyId)
@@ -167,7 +157,7 @@ func (_ *Pauling) End(args *models.Args, nop *Noreply) error {
 func (_ *Pauling) AllowPlayer(args *models.Args, nop *Noreply) error {
 	s, err := getServer(args.Id)
 	if err != nil {
-		return ErrNoServer
+		return err
 	}
 
 	s.AllowedPlayers.Lock()
@@ -185,7 +175,7 @@ func (_ *Pauling) AllowPlayer(args *models.Args, nop *Noreply) error {
 func (_ *Pauling) DisallowPlayer(args *models.Args, nop *Noreply) error {
 	s, err := getServer(args.Id)
 	if err != nil {
-		return ErrNoServer
+		return err
 	}
 
 	if !s.IsPlayerAllowed(args.SteamId) {

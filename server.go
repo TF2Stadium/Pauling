@@ -16,8 +16,6 @@ import (
 	"github.com/TF2Stadium/TF2RconWrapper"
 )
 
-var NewServerChan = make(chan *Server)
-
 type Server struct {
 	Map       string // lobby map
 	League    string
@@ -133,7 +131,7 @@ func (s *Server) StartVerifier(ticker *time.Ticker) {
 	}
 }
 
-func (s *Server) LogListener() {
+func (s *Server) logListener() {
 	//Steam IDs used in Source logs are of the form [C:U:A]
 	//We convert these into a 64-bit Steam Community ID, which
 	//is what Helen uses (and is sent in RPC calls)
@@ -260,7 +258,7 @@ func (s *Server) Setup() error {
 
 	Logger.Debug("#%d: Creating listener", s.LobbyId)
 	s.ServerListener = RconListener.CreateServerListener(s.Rcon)
-	go s.LogListener()
+	go s.logListener()
 
 	// change map,
 	Logger.Debug("#%d: Changing Map", s.LobbyId)
