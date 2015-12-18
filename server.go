@@ -107,6 +107,8 @@ func (s *Server) StartVerifier(ticker *time.Ticker) {
 	}
 	if count == 5 {
 		PushEvent(EventDisconectedFromServer, s.LobbyId)
+		s.ServerListener.Close(s.Rcon)
+		s.StopLogListener <- struct{}{}
 		return
 	}
 
