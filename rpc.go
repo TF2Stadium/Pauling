@@ -195,10 +195,26 @@ func (_ *Pauling) DisallowPlayer(args *models.Args, nop *Noreply) error {
 	}
 	s.Slots.Unlock()
 
+	players, _ := s.Rcon.GetPlayers()
+	for _, player := range players {
+		if player.SteamID == id {
+			s.Rcon.KickPlayer(player, "[tf2stadium.com] You have been replaced.")
+		}
+	}
+
 	return nil
 }
 
 func (_ *Pauling) GetEvent(args *models.Args, event *models.Event) error {
 	*event = <-EventQueue
 	return nil
+}
+
+func (*Pauling) Say(args *models.Args, nop *Noreply) error {
+	s, err := getServer(args.Id)
+	if err != nil {
+		return err
+	}
+
+	return s.Rcon.Say(args.Text)
 }
