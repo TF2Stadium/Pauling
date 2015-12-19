@@ -125,7 +125,6 @@ func (s *Server) StartVerifier(ticker *time.Ticker) {
 			Logger.Debug("Stopping logger for lobby %d", s.LobbyId)
 			s.Rcon.Say("[tf2stadium.com] Lobby Ended.")
 			ticker.Stop()
-			s.ServerListener.Close(s.Rcon)
 			s.Rcon.Close()
 			deleteServer(s.LobbyId)
 			return
@@ -152,6 +151,7 @@ func (s *Server) logListener() {
 
 			switch message.Parsed.Type {
 			case TF2RconWrapper.WorldGameOver:
+				s.ServerListener.Close(s.Rcon)
 				PushEvent(EventMatchEnded, s.LobbyId)
 				s.StopVerifier <- struct{}{}
 				return
