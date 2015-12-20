@@ -97,21 +97,23 @@ func (s *Server) StartVerifier(ticker *time.Ticker) {
 	var err error
 	var count int
 
-	s.Rcon.Close()
-	s.Rcon, err = TF2RconWrapper.NewTF2RconConnection(s.Info.Host, s.Info.RconPassword)
-	for err != nil && count != 5 {
-		time.Sleep(1 * time.Second)
-		Logger.Critical(err.Error())
-		count++
+	_, err = s.Rcon.Query("status")
+	if err != nil {
+		s.Rcon.Close()
 		s.Rcon, err = TF2RconWrapper.NewTF2RconConnection(s.Info.Host, s.Info.RconPassword)
+		for err != nil && count != 5 {
+			time.Sleep(1 * time.Second)
+			Logger.Critical(err.Error())
+			count++
+			s.Rcon, err = TF2RconWrapper.NewTF2RconConnection(s.Info.Host, s.Info.RconPassword)
+		}
+		if count == 5 {
+			PushEvent(EventDisconectedFromServer, s.LobbyId)
+			s.ServerListener.Close(s.Rcon)
+			s.StopLogListener <- struct{}{}
+			return
+		}
 	}
-	if count == 5 {
-		PushEvent(EventDisconectedFromServer, s.LobbyId)
-		s.ServerListener.Close(s.Rcon)
-		s.StopLogListener <- struct{}{}
-		return
-	}
-
 	for {
 		select {
 		case <-ticker.C:
@@ -273,7 +275,24 @@ func (s *Server) Setup() error {
 	Logger.Debug("#%d: Executing config.", s.LobbyId)
 	err = s.ExecConfig()
 	if err != nil {
-		return err
+		Logger.Error(err.Error())
+		var count int
+
+		s.Rcon.Close()
+		s.Rcon, err = TF2RconWrapper.NewTF2RconConnection(s.Info.Host, s.Info.RconPassword)
+		for err != nil && count != 5 {
+			time.Sleep(1 * time.Second)
+			Logger.Critical(err.Error())
+			count++
+			s.Rcon, err = TF2RconWrapper.NewTF2RconConnection(s.Info.Host, s.Info.RconPassword)
+		}
+		if count == 5 {
+			return err
+		}
+
+		if err = s.ExecConfig(); err != nil {
+			return err
+		}
 
 	}
 
