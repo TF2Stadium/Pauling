@@ -51,7 +51,7 @@ func GetTeam(lobbyID uint, lobbyType models.LobbyType, steamID string) string {
 }
 
 // GetSlotSteamID returns the steam ID for the player occupying the given slot
-func GetSlotSteamID(team, class string, lobbyType models.LobbyType) string {
+func GetSlotSteamID(team, class string, lobbyID uint, lobbyType models.LobbyType) string {
 	var (
 		steamID  string
 		playerID uint
@@ -62,8 +62,8 @@ func GetSlotSteamID(team, class string, lobbyType models.LobbyType) string {
 		return ""
 	}
 
-	db.QueryRow("SELECT player_id FROM lobby_slots WHERE slot = $1", slot).Scan(&playerID)
-	db.QueryRow("SELECT steam_id FROM players WHERE player_id = $1", playerID).Scan(&steamID)
+	db.QueryRow("SELECT player_id FROM lobby_slots WHERE slot = $1 AND lobby_id = $2", slot, lobbyID).Scan(&playerID)
+	db.QueryRow("SELECT steam_id FROM players WHERE id = $1", playerID).Scan(&steamID)
 
 	return steamID
 }
@@ -79,12 +79,11 @@ func GetName(steamID string) string {
 
 func IsAllowed(lobbyID uint, steamID string) bool {
 	playerID := getPlayerID(steamID)
-
 	if playerID == 0 {
 		return false
 	}
 
-	rows, err := db.Query("SELECT slot FROM lobby_slots WHERE player_id = $1")
+	rows, err := db.Query("SELECT slot FROM lobby_slots WHERE player_id = $1 AND lobby_id = $2", playerID, lobbyID)
 	if err != nil {
 		return false
 	}
