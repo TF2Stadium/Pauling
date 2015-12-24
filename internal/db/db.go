@@ -3,7 +3,6 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	"os"
 
 	_ "github.com/lib/pq" // postgres driver
 
