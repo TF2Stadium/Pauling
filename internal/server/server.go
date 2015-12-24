@@ -376,7 +376,8 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 		return
 	}
 
-	team = db.GetTeam(s.LobbyId, s.Type, data.SteamId)
+	playerCommID, _ := steamid.SteamIdToCommId(data.SteamId)
+	team = db.GetTeam(s.LobbyId, s.Type, playerCommID)
 
 	if matches[1] == "their" && team == "red" {
 		team = "blu"
@@ -384,13 +385,18 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 		return
 	}
 
-	reppedSteamID := db.GetSlotSteamID(team, matches[2], s.Type)
+	//helpers.Logger.Debug("%s - %s", matches[1], team)
+
+	reppedSteamID := db.GetSlotSteamID(team, matches[2], s.LobbyId, s.Type)
 	if reppedSteamID == "" {
+		//helpers.Logger.Debug("empty")
 		return
 	}
+	//helpers.Logger.Debug(reppedSteamID)
 
 	reppedName := db.GetName(reppedSteamID)
 	slot := team + matches[2]
+	//helpers.Logger.Debug(reppedName)
 
 	s.PlayersRep.RLock()
 	if s.PlayersRep.Map[data.SteamId+slot] {
