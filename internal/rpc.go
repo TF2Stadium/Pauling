@@ -1,4 +1,4 @@
-package main
+package rpc
 
 import (
 	"errors"
@@ -9,8 +9,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/TF2Stadium/Pauling/internal/event"
+	"github.com/TF2Stadium/Pauling/internal/helpers"
+	"github.com/TF2Stadium/Pauling/internal/server"
+
 	"github.com/TF2Stadium/Helen/models"
-	"github.com/TF2Stadium/Pauling/helpers"
 	"github.com/TF2Stadium/PlayerStatsScraper/steamid"
 	rconwrapper "github.com/TF2Stadium/TF2RconWrapper"
 	"github.com/james4k/rcon"
@@ -19,7 +22,7 @@ import (
 type Pauling struct{}
 type Noreply struct{}
 
-func startRPC() {
+func StartRPC() {
 	pauling := new(Pauling)
 	rpc.Register(pauling)
 	rpc.HandleHTTP()
@@ -38,7 +41,7 @@ func (_ *Pauling) VerifyInfo(info *models.ServerRecord, nop *Noreply) error {
 		defer c.Close()
 
 		c.Query("log on; sv_rcon_log 1; sv_logflush 1")
-		listener := RconListener.CreateServerListener(c)
+		listener := helpers.RconListener.CreateServerListener(c)
 
 		tick := time.After(time.Second * 5)
 		err := make(chan error)
@@ -80,7 +83,7 @@ func (_ *Pauling) VerifyInfo(info *models.ServerRecord, nop *Noreply) error {
 }
 
 func (_ *Pauling) SetupServer(args *models.Args, nop *Noreply) error {
-	s := NewServer()
+	s := server.NewServer()
 	s.LobbyId = args.Id
 	s.Info = args.Info
 	s.Type = args.Type
@@ -97,12 +100,12 @@ func (_ *Pauling) SetupServer(args *models.Args, nop *Noreply) error {
 
 	go s.StartVerifier(time.NewTicker(time.Second * 10))
 
-	setServer(args.Id, s)
+	server.SetServer(args.Id, s)
 	return nil
 }
 
 func (_ *Pauling) ReExecConfig(args *models.Args, nop *Noreply) error {
-	s, err := getServer(args.Id)
+	s, err := server.GetServer(args.Id)
 	if err != nil {
 		return err
 	}
@@ -118,12 +121,12 @@ func (_ *Pauling) ReExecConfig(args *models.Args, nop *Noreply) error {
 }
 
 func (_ *Pauling) End(args *models.Args, nop *Noreply) error {
-	s, err := getServer(args.Id)
+	s, err := server.GetServer(args.Id)
 	if err != nil {
 		return err
 	}
 
-	deleteServer(s.LobbyId)
+	server.DeleteServer(s.LobbyId)
 	//now := time.Now().Unix()
 	s.ServerListener.Close(s.Rcon)
 	s.StopLogListener <- struct{}{}
@@ -133,7 +136,7 @@ func (_ *Pauling) End(args *models.Args, nop *Noreply) error {
 }
 
 func (_ *Pauling) DisallowPlayer(args *models.Args, nop *Noreply) error {
-	s, err := getServer(args.Id)
+	s, err := server.GetServer(args.Id)
 	if err != nil {
 		return err
 	}
@@ -154,13 +157,13 @@ func (_ *Pauling) DisallowPlayer(args *models.Args, nop *Noreply) error {
 	return nil
 }
 
-func (_ *Pauling) GetEvent(args *models.Args, event *models.Event) error {
-	*event = <-EventQueue
+func (_ *Pauling) GetEvent(args *models.Args, e *models.Event) error {
+	*e = event.Get()
 	return nil
 }
 
 func (*Pauling) Say(args *models.Args, nop *Noreply) error {
-	s, err := getServer(args.Id)
+	s, err := server.GetServer(args.Id)
 	if err != nil {
 		return err
 	}

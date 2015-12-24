@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"errors"
@@ -12,8 +12,9 @@ import (
 
 	"github.com/TF2Stadium/Helen/config"
 	"github.com/TF2Stadium/Helen/models"
-	"github.com/TF2Stadium/Pauling/db"
-	"github.com/TF2Stadium/Pauling/helpers"
+	"github.com/TF2Stadium/Pauling/internal/db"
+	"github.com/TF2Stadium/Pauling/internal/event"
+	"github.com/TF2Stadium/Pauling/internal/helpers"
 	"github.com/TF2Stadium/PlayerStatsScraper/steamid"
 	"github.com/TF2Stadium/TF2RconWrapper"
 )
@@ -88,7 +89,7 @@ func (s *Server) StartVerifier(ticker *time.Ticker) {
 			s.Rcon, err = TF2RconWrapper.NewTF2RconConnection(s.Info.Host, s.Info.RconPassword)
 		}
 		if count == 5 {
-			PushEvent(EventDisconectedFromServer, s.LobbyId)
+			event.Push(event.DisconectedFromServer, s.LobbyId)
 			s.ServerListener.Close(s.Rcon)
 			s.StopLogListener <- struct{}{}
 			return
@@ -100,7 +101,7 @@ func (s *Server) StartVerifier(ticker *time.Ticker) {
 			if !s.Verify() {
 				ticker.Stop()
 				s.Rcon.Close()
-				deleteServer(s.LobbyId)
+				DeleteServer(s.LobbyId)
 				return
 			}
 		case <-s.StopVerifier:
@@ -108,7 +109,7 @@ func (s *Server) StartVerifier(ticker *time.Ticker) {
 			s.Rcon.Say("[tf2stadium.com] Lobby Ended.")
 			ticker.Stop()
 			s.Rcon.Close()
-			deleteServer(s.LobbyId)
+			DeleteServer(s.LobbyId)
 			return
 		}
 	}
@@ -134,7 +135,7 @@ func (s *Server) logListener() {
 			switch message.Parsed.Type {
 			case TF2RconWrapper.WorldGameOver:
 				s.ServerListener.Close(s.Rcon)
-				PushEvent(EventMatchEnded, s.LobbyId)
+				event.Push(event.MatchEnded, s.LobbyId)
 				s.StopVerifier <- struct{}{}
 				return
 			case TF2RconWrapper.PlayerGlobalMessage:
@@ -145,7 +146,7 @@ func (s *Server) logListener() {
 					s.report(message.Parsed.Data)
 				} else if strings.HasPrefix(text, "!sub") {
 					commID, _ := steamid.SteamIdToCommId(message.Parsed.Data.SteamId)
-					PushEvent(EventSubstitute, s.LobbyId, commID)
+					event.Push(event.Substitute, s.LobbyId, commID)
 					say := fmt.Sprintf("Reporting player %s (%s)",
 						message.Parsed.Data.Username, message.Parsed.Data.SteamId)
 					s.Rcon.Say(say)
@@ -153,7 +154,7 @@ func (s *Server) logListener() {
 			case TF2RconWrapper.WorldPlayerConnected:
 				commID, _ := steamid.SteamIdToCommId(message.Parsed.Data.SteamId)
 				if s.IsPlayerAllowed(commID) {
-					PushEvent(EventPlayerConnected, s.LobbyId, commID)
+					event.Push(event.PlayerConnected, s.LobbyId, commID)
 				} else {
 					s.Rcon.KickPlayerID(message.Parsed.Data.UserId,
 						"[tf2stadium.com] You're not in the lobby...")
@@ -161,7 +162,7 @@ func (s *Server) logListener() {
 			case TF2RconWrapper.WorldPlayerDisconnected:
 				commID, _ := steamid.SteamIdToCommId(message.Parsed.Data.SteamId)
 				if s.IsPlayerAllowed(commID) {
-					PushEvent(EventPlayerDisconnected, s.LobbyId, commID)
+					event.Push(event.PlayerDisconnected, s.LobbyId, commID)
 				}
 			}
 
@@ -241,7 +242,7 @@ func (s *Server) Setup() error {
 	f.Close()
 
 	helpers.Logger.Debug("#%d: Creating listener", s.LobbyId)
-	s.ServerListener = RconListener.CreateServerListener(s.Rcon)
+	s.ServerListener = helpers.RconListener.CreateServerListener(s.Rcon)
 	go s.logListener()
 
 	// change map,
@@ -322,7 +323,7 @@ func (s *Server) Verify() bool {
 	for err != nil { //TODO: Stop connection after x retries
 		if retries == 6 {
 			//Logger.Warning("#%d: Couldn't query %s after 5 retries", s.LobbyId, s.Info.Host)
-			PushEvent(EventDisconectedFromServer, s.LobbyId)
+			event.Push(event.DisconectedFromServer, s.LobbyId)
 			return false
 		}
 		retries++
@@ -430,7 +431,7 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 	}
 
 	if repped {
-		PushEvent(EventSubstitute, s.LobbyId, reppedSteamID)
+		event.Push(event.Substitute, s.LobbyId, reppedSteamID)
 
 		say := fmt.Sprintf("Reported player %s (%s)", reppedName, reppedSteamID)
 		s.Rcon.Say(say)

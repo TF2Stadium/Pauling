@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"errors"
@@ -12,7 +12,7 @@ var (
 	ErrNoServer = errors.New("Server doesn't exist.")
 )
 
-func getServer(id uint) (s *Server, err error) {
+func GetServer(id uint) (s *Server, err error) {
 	var exists bool
 
 	mu.RLock()
@@ -26,13 +26,13 @@ func getServer(id uint) (s *Server, err error) {
 	return
 }
 
-func setServer(id uint, s *Server) {
+func SetServer(id uint, s *Server) {
 	mu.Lock()
 	servers[id] = s
 	mu.Unlock()
 }
 
-func deleteServer(id uint) {
+func DeleteServer(id uint) {
 	mu.Lock()
 	delete(servers, id)
 	mu.Unlock()

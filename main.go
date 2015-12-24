@@ -5,14 +5,11 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 
-	"github.com/DSchalla/go-pid"
-	"github.com/TF2Stadium/Pauling/db"
-	"github.com/TF2Stadium/Pauling/helpers"
-	rcon "github.com/TF2Stadium/TF2RconWrapper"
-)
+	"github.com/TF2Stadium/Pauling/internal"
+	"github.com/TF2Stadium/Pauling/internal/db"
+	"github.com/TF2Stadium/Pauling/internal/helpers"
 
-var (
-	RconListener *rcon.RconChatListener
+	"github.com/DSchalla/go-pid"
 )
 
 func getlocalip() string {
@@ -39,16 +36,6 @@ func main() {
 	if pid.Create() == nil {
 		defer pid.Remove()
 	}
-
-	helpers.Logger.Debug("Getting IP Address")
-	ip := getlocalip()
-	var err error
-	RconListener, err = rcon.NewRconChatListener(ip, helpers.PortRcon)
-	if err != nil {
-		helpers.Logger.Fatal(err)
-	}
-
-	helpers.Logger.Info("Listening for server messages on %s:%s", ip, helpers.PortRcon)
-	startRPC()
+	rpc.StartRPC()
 	//PushEvent("getServers")
 }

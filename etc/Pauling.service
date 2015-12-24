@@ -1,8 +1,0 @@
-[Unit]
-Description=TF2Stadium Backend for Game Server Management
-
-[Service]
-ExecStart=/usr/bin/Pauling
-
-[Install]
-WantedBy=multi-user.target

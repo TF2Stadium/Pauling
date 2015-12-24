@@ -8,7 +8,7 @@ import (
 	_ "github.com/lib/pq" // postgres driver
 
 	"github.com/TF2Stadium/Helen/models"
-	"github.com/TF2Stadium/Pauling/helpers"
+	"github.com/TF2Stadium/Pauling/internal/helpers"
 )
 
 func override(s, env string) string {
