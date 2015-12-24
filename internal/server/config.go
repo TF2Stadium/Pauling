@@ -43,7 +43,7 @@ func ConfigName(mapName string, lobbyType models.LobbyType, ruleset string) (str
 //Execute file located at path on rcon
 //TODO: Shouldn't this be in TF2RconWrapper?
 func ExecFile(path string, rcon *tf2rcon.TF2RconConnection) error {
-	configPath, _ := filepath.Abs("./configs/")
+	configPath, _ := filepath.Abs("../../configs/")
 	data, _ := ioutil.ReadFile(configPath + "/" + path)
 
 	lines := strings.Split(string(data), "\n")

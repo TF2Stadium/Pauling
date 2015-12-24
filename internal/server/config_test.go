@@ -10,7 +10,7 @@ import (
 )
 
 func TestConfigName(t *testing.T) {
-	configPath, _ := filepath.Abs("./configs/")
+	configPath, _ := filepath.Abs("../../configs/")
 	cases := []struct {
 		mapName   string
 		lobbyType models.LobbyType
