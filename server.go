@@ -12,6 +12,8 @@ import (
 
 	"github.com/TF2Stadium/Helen/config"
 	"github.com/TF2Stadium/Helen/models"
+	"github.com/TF2Stadium/Pauling/db"
+	"github.com/TF2Stadium/Pauling/helpers"
 	"github.com/TF2Stadium/PlayerStatsScraper/steamid"
 	"github.com/TF2Stadium/TF2RconWrapper"
 )
@@ -23,18 +25,6 @@ type Server struct {
 	Whitelist int
 
 	LobbyId uint
-
-	PrevConnected map[string]bool
-
-	AllowedPlayers struct {
-		Map map[string]bool
-		*sync.RWMutex
-	}
-
-	Slots struct {
-		Map map[string]string
-		*sync.RWMutex
-	}
 
 	Reps struct {
 		Map map[string]int
@@ -57,20 +47,10 @@ type Server struct {
 
 func NewServer() *Server {
 	s := &Server{
-		AllowedPlayers: struct {
-			Map map[string]bool
-			*sync.RWMutex
-		}{make(map[string]bool), new(sync.RWMutex)},
-
 		Reps: struct {
 			Map map[string]int
 			*sync.RWMutex
 		}{make(map[string]int), new(sync.RWMutex)},
-
-		Slots: struct {
-			Map map[string]string
-			*sync.RWMutex
-		}{make(map[string]string), new(sync.RWMutex)},
 
 		PlayersRep: struct {
 			Map map[string]bool
@@ -103,7 +83,7 @@ func (s *Server) StartVerifier(ticker *time.Ticker) {
 		s.Rcon, err = TF2RconWrapper.NewTF2RconConnection(s.Info.Host, s.Info.RconPassword)
 		for err != nil && count != 5 {
 			time.Sleep(1 * time.Second)
-			Logger.Critical(err.Error())
+			helpers.Logger.Critical(err.Error())
 			count++
 			s.Rcon, err = TF2RconWrapper.NewTF2RconConnection(s.Info.Host, s.Info.RconPassword)
 		}
@@ -124,7 +104,7 @@ func (s *Server) StartVerifier(ticker *time.Ticker) {
 				return
 			}
 		case <-s.StopVerifier:
-			Logger.Debug("Stopping logger for lobby %d", s.LobbyId)
+			helpers.Logger.Debug("Stopping logger for lobby %d", s.LobbyId)
 			s.Rcon.Say("[tf2stadium.com] Lobby Ended.")
 			ticker.Stop()
 			s.Rcon.Close()
@@ -142,8 +122,8 @@ func (s *Server) logListener() {
 		select {
 		case raw := <-s.ServerListener.RawMessages:
 			message, err := TF2RconWrapper.ParseMessage(raw)
-			if PrintLogMessages {
-				Logger.Debug(message.Message)
+			if helpers.PrintLogMessages {
+				helpers.Logger.Debug(message.Message)
 			}
 			//Logger.Debug(message.Message)
 
@@ -198,7 +178,7 @@ func (s *Server) Setup() error {
 		return nil
 	}
 
-	Logger.Debug("#%d: Connecting to %s", s.LobbyId, s.Info.Host)
+	helpers.Logger.Debug("#%d: Connecting to %s", s.LobbyId, s.Info.Host)
 
 	var err error
 	s.Rcon, err = TF2RconWrapper.NewTF2RconConnection(s.Info.Host, s.Info.RconPassword)
@@ -207,14 +187,14 @@ func (s *Server) Setup() error {
 	}
 
 	// kick players
-	Logger.Debug("#%d: Kicking all players", s.LobbyId)
+	helpers.Logger.Debug("#%d: Kicking all players", s.LobbyId)
 	kickErr := s.KickAll()
 
 	if kickErr != nil {
 		return kickErr
 	}
 
-	Logger.Debug("#%d: Setting whitelist", s.LobbyId)
+	helpers.Logger.Debug("#%d: Setting whitelist", s.LobbyId)
 	// whitelist
 	_, err = s.Rcon.Query(fmt.Sprintf("tftrue_whitelist_id %d", s.Whitelist))
 	if err == TF2RconWrapper.ErrUnknownCommand {
@@ -260,29 +240,29 @@ func (s *Server) Setup() error {
 	}
 	f.Close()
 
-	Logger.Debug("#%d: Creating listener", s.LobbyId)
+	helpers.Logger.Debug("#%d: Creating listener", s.LobbyId)
 	s.ServerListener = RconListener.CreateServerListener(s.Rcon)
 	go s.logListener()
 
 	// change map,
-	Logger.Debug("#%d: Changing Map", s.LobbyId)
+	helpers.Logger.Debug("#%d: Changing Map", s.LobbyId)
 	mapErr := s.Rcon.ChangeMap(s.Map)
 
 	if mapErr != nil {
 		return mapErr
 	}
 
-	Logger.Debug("#%d: Executing config.", s.LobbyId)
+	helpers.Logger.Debug("#%d: Executing config.", s.LobbyId)
 	err = s.ExecConfig()
 	if err != nil {
-		Logger.Error(err.Error())
+		helpers.Logger.Error(err.Error())
 		var count int
 
 		s.Rcon.Close()
 		s.Rcon, err = TF2RconWrapper.NewTF2RconConnection(s.Info.Host, s.Info.RconPassword)
 		for err != nil && count != 5 {
 			time.Sleep(1 * time.Second)
-			Logger.Critical(err.Error())
+			helpers.Logger.Critical(err.Error())
 			count++
 			s.Rcon, err = TF2RconWrapper.NewTF2RconConnection(s.Info.Host, s.Info.RconPassword)
 		}
@@ -296,7 +276,7 @@ func (s *Server) Setup() error {
 
 	}
 
-	Logger.Debug("#%d: Configured", s.LobbyId)
+	helpers.Logger.Debug("#%d: Configured", s.LobbyId)
 	return nil
 }
 
@@ -360,14 +340,7 @@ func (s *Server) KickAll() error {
 }
 
 func (s *Server) IsPlayerAllowed(commId string) bool {
-	s.AllowedPlayers.RLock()
-	defer s.AllowedPlayers.RUnlock()
-
-	if _, ok := s.AllowedPlayers.Map[commId]; ok {
-		return true
-	}
-
-	return false
+	return db.IsAllowed(s.LobbyId, commId)
 }
 
 var (
@@ -402,23 +375,22 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 		return
 	}
 
-	switch matches[1] {
-	case "our":
-		team = strings.ToLower(data.Team)
-	case "their":
-		our := strings.ToLower(data.Team)
-		if our == "red" {
-			team = "blu"
-		} else {
-			team = "red"
-		}
-	}
+	team = db.GetTeam(s.LobbyId, s.Type, data.SteamId)
 
-	if team == "blue" {
+	if matches[1] == "their" && team == "red" {
 		team = "blu"
+	} else if matches[1] != "our" {
+		return
 	}
 
+	reppedSteamID := db.GetSlotSteamID(team, matches[2], s.Type)
+	if reppedSteamID == "" {
+		return
+	}
+
+	reppedName := db.GetName(reppedSteamID)
 	slot := team + matches[2]
+
 	s.PlayersRep.RLock()
 	if s.PlayersRep.Map[data.SteamId+slot] {
 		s.PlayersRep.RUnlock()
@@ -426,20 +398,12 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 	}
 	s.PlayersRep.RUnlock()
 
-	s.Slots.RLock()
-	steamID, ok := s.Slots.Map[slot]
-	s.Slots.RUnlock()
-	if !ok {
-		Logger.Debug("%s doesn't exist in map %v\n", slot, s.Slots.Map)
-		return
-	}
-
 	s.Reps.Lock()
-	s.Reps.Map[steamID]++
-	votes := s.Reps.Map[steamID]
-	repped := (s.Reps.Map[steamID] == repsNeeded[s.Type])
+	s.Reps.Map[reppedSteamID]++
+	votes := s.Reps.Map[reppedSteamID]
+	repped := (s.Reps.Map[reppedSteamID] == repsNeeded[s.Type])
 	if repped {
-		s.Reps.Map[steamID] = 0
+		s.Reps.Map[reppedSteamID] = 0
 	}
 	s.Reps.Unlock()
 
@@ -453,7 +417,7 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 				select {
 				case <-tick:
 					s.Reps.Lock()
-					s.Reps.Map[steamID] = 0
+					s.Reps.Map[reppedSteamID] = 0
 					s.Reps.Unlock()
 					s.Rcon.Say("Not sufficient votes after 1 minute, player not reported.")
 					s.clearReps(slot)
@@ -465,17 +429,10 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 		}()
 	}
 
-	var player TF2RconWrapper.Player
-	players, _ := s.Rcon.GetPlayers()
-	for _, p := range players {
-		player = p
-	}
-
 	if repped {
-		steamID, _ = steamid.SteamIdToCommId(steamID)
-		PushEvent(EventSubstitute, s.LobbyId, steamID)
+		PushEvent(EventSubstitute, s.LobbyId, reppedSteamID)
 
-		say := fmt.Sprintf("Reported player %s (%s)", player.Username, player.SteamID)
+		say := fmt.Sprintf("Reported player %s (%s)", reppedName, reppedSteamID)
 		s.Rcon.Say(say)
 		stopRepTimeout[s.LobbyId] <- struct{}{}
 		close(stopRepTimeout[s.LobbyId])
@@ -484,7 +441,7 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 	} else {
 
 		say := fmt.Sprintf("Reporting %s (%s): %d/%d votes",
-			player.Username, player.SteamID, votes, repsNeeded[s.Type])
+			reppedName, reppedSteamID, votes, repsNeeded[s.Type])
 		s.Rcon.Say(say)
 		s.PlayersRep.Lock()
 		s.PlayersRep.Map[data.SteamId+slot] = true

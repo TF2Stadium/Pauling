@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/TF2Stadium/Helen/models"
+	"github.com/TF2Stadium/Pauling/helpers"
 	"github.com/TF2Stadium/PlayerStatsScraper/steamid"
 	rconwrapper "github.com/TF2Stadium/TF2RconWrapper"
 	"github.com/james4k/rcon"
@@ -23,15 +24,12 @@ func startRPC() {
 	rpc.Register(pauling)
 	rpc.HandleHTTP()
 
-	port := "8001"
-	overrideFromEnv(&port, "PAULING_PORT")
-
-	l, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%s", port))
+	l, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%s", helpers.PortRPC))
 	if err != nil {
-		Logger.Fatal(err)
+		helpers.Logger.Fatal(err)
 	}
-	Logger.Info("Listening on %s", port)
-	Logger.Fatal(http.Serve(l, nil))
+	helpers.Logger.Info("Listening on %s", helpers.PortRPC)
+	helpers.Logger.Fatal(http.Serve(l, nil))
 }
 
 func (_ *Pauling) VerifyInfo(info *models.ServerRecord, nop *Noreply) error {
@@ -81,27 +79,6 @@ func (_ *Pauling) VerifyInfo(info *models.ServerRecord, nop *Noreply) error {
 	return errors.New("Couldn't connect to the server.")
 }
 
-func (_ *Pauling) SetupVerifier(args *models.ServerBootstrap, nop *Noreply) error {
-	s := NewServer()
-	setServer(args.LobbyId, s)
-
-	s.LobbyId = args.LobbyId
-	s.Info = args.Info
-
-	s.AllowedPlayers.Lock()
-	defer s.AllowedPlayers.Unlock()
-
-	for _, playerId := range args.BannedPlayers {
-		s.AllowedPlayers.Map[playerId] = false
-	}
-	for _, playerId := range args.Players {
-		s.AllowedPlayers.Map[playerId] = true
-	}
-	go s.StartVerifier(time.NewTicker(time.Second * 10))
-
-	return nil
-}
-
 func (_ *Pauling) SetupServer(args *models.Args, nop *Noreply) error {
 	s := NewServer()
 	s.LobbyId = args.Id
@@ -114,7 +91,7 @@ func (_ *Pauling) SetupServer(args *models.Args, nop *Noreply) error {
 	err := s.Setup()
 	if err != nil {
 		//Logger.Warning(err.Error())
-		Logger.Debug("#%d: Error while setting up: %s", args.Id, err.Error())
+		helpers.Logger.Error("#%d: Error while setting up: %s", args.Id, err.Error())
 		return err
 	}
 
@@ -155,24 +132,6 @@ func (_ *Pauling) End(args *models.Args, nop *Noreply) error {
 	return nil
 }
 
-func (_ *Pauling) AllowPlayer(args *models.Args, nop *Noreply) error {
-	s, err := getServer(args.Id)
-	if err != nil {
-		return err
-	}
-
-	s.AllowedPlayers.Lock()
-	s.AllowedPlayers.Map[args.SteamId] = true
-	s.AllowedPlayers.Unlock()
-
-	s.Slots.Lock()
-	id, _ := steamid.CommIdToSteamId(args.SteamId)
-	s.Slots.Map[args.Slot] = id
-	s.Slots.Unlock()
-
-	return nil
-}
-
 func (_ *Pauling) DisallowPlayer(args *models.Args, nop *Noreply) error {
 	s, err := getServer(args.Id)
 	if err != nil {
@@ -183,18 +142,7 @@ func (_ *Pauling) DisallowPlayer(args *models.Args, nop *Noreply) error {
 		return nil
 	}
 
-	s.AllowedPlayers.Lock()
-	defer s.AllowedPlayers.Unlock()
-	delete(s.AllowedPlayers.Map, args.SteamId)
-
-	s.Slots.Lock()
 	id, _ := steamid.CommIdToSteamId(args.SteamId)
-	for slot, steamID := range s.Slots.Map {
-		if steamID == id {
-			delete(s.Slots.Map, slot)
-		}
-	}
-	s.Slots.Unlock()
 
 	players, _ := s.Rcon.GetPlayers()
 	for _, player := range players {
