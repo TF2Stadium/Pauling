@@ -11,13 +11,6 @@ import (
 	"github.com/TF2Stadium/Pauling/internal/helpers"
 )
 
-func override(s, env string) string {
-	if val := os.Getenv(env); val != "" {
-		s = val
-	}
-	return s
-}
-
 var db *sql.DB
 
 func ConnectDB() {
