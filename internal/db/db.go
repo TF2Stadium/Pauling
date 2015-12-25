@@ -28,7 +28,8 @@ func ConnectDB() {
 	}
 }
 
-func getPlayerID(steamid string) uint {
+// GetPlayerID returns a player ID (primary key), given their Steam Community id
+func GetPlayerID(steamid string) uint {
 	var id uint
 
 	rows, _ := db.Query("SELECT id FROM players WHERE steam_id = $1", steamid)
@@ -43,7 +44,7 @@ func getPlayerID(steamid string) uint {
 func GetTeam(lobbyID uint, lobbyType models.LobbyType, steamID string) string {
 	var slot int
 
-	db.QueryRow("SELECT slot FROM lobby_slots WHERE player_id = $1", getPlayerID(steamID)).Scan(&slot)
+	db.QueryRow("SELECT slot FROM lobby_slots WHERE player_id = $1", GetPlayerID(steamID)).Scan(&slot)
 
 	team, _, _ := models.LobbyGetSlotInfoString(lobbyType, slot)
 
@@ -78,7 +79,7 @@ func GetName(steamID string) string {
 }
 
 func IsAllowed(lobbyID uint, steamID string) bool {
-	playerID := getPlayerID(steamID)
+	playerID := GetPlayerID(steamID)
 	if playerID == 0 {
 		return false
 	}
