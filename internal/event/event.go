@@ -25,13 +25,13 @@ func Push(name string, value ...interface{}) {
 
 	switch name {
 	case PlayerDisconnected, PlayerConnected:
-		event["lobbyId"] = value[0].(uint)
-		event["steamId"] = value[1].(string)
+		event["lobbyID"] = value[0].(uint)
+		event["playerID"] = value[1].(uint)
 	case Substitute:
-		event["lobbyId"] = value[0].(uint)
-		event["steamId"] = value[1].(string)
+		event["lobbyID"] = value[0].(uint)
+		event["playerID"] = value[1].(uint)
 	case DisconectedFromServer, MatchEnded:
-		event["lobbyId"] = value[0].(uint)
+		event["lobbyID"] = value[0].(uint)
 	}
 
 	eventQueue <- event

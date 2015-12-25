@@ -146,15 +146,25 @@ func (s *Server) logListener() {
 					s.report(message.Parsed.Data)
 				} else if strings.HasPrefix(text, "!sub") {
 					commID, _ := steamid.SteamIdToCommId(message.Parsed.Data.SteamId)
+					playerID := db.GetPlayerID(commID)
+
+					if playerID == 0 {
+						helpers.Logger.Error("Couldn't find player ID for %s", commID)
+						continue
+					}
+
 					event.Push(event.Substitute, s.LobbyId, commID)
+
 					say := fmt.Sprintf("Reporting player %s (%s)",
 						message.Parsed.Data.Username, message.Parsed.Data.SteamId)
 					s.Rcon.Say(say)
 				}
 			case TF2RconWrapper.WorldPlayerConnected:
 				commID, _ := steamid.SteamIdToCommId(message.Parsed.Data.SteamId)
+
 				if s.IsPlayerAllowed(commID) {
-					event.Push(event.PlayerConnected, s.LobbyId, commID)
+					playerID := db.GetPlayerID(commID)
+					event.Push(event.PlayerConnected, s.LobbyId, playerID)
 				} else {
 					s.Rcon.KickPlayerID(message.Parsed.Data.UserId,
 						"[tf2stadium.com] You're not in the lobby...")
@@ -162,7 +172,8 @@ func (s *Server) logListener() {
 			case TF2RconWrapper.WorldPlayerDisconnected:
 				commID, _ := steamid.SteamIdToCommId(message.Parsed.Data.SteamId)
 				if s.IsPlayerAllowed(commID) {
-					event.Push(event.PlayerDisconnected, s.LobbyId, commID)
+					playerID := db.GetPlayerID(commID)
+					event.Push(event.PlayerDisconnected, s.LobbyId, playerID)
 				}
 			}
 
@@ -437,7 +448,8 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 	}
 
 	if repped {
-		event.Push(event.Substitute, s.LobbyId, reppedSteamID)
+		playerID := db.GetPlayerID(reppedSteamID)
+		event.Push(event.Substitute, s.LobbyId, playerID)
 
 		say := fmt.Sprintf("Reported player %s (%s)", reppedName, reppedSteamID)
 		s.Rcon.Say(say)
