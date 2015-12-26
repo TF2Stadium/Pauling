@@ -6,33 +6,51 @@ import (
 
 var eventQueue = make(chan models.Event, 100)
 
-const (
-	Test                  = "test"
-	PlayerDisconnected    = "playerDisc"
-	PlayerConnected       = "playerConn"
-	DisconectedFromServer = "discFromServer"
-	MatchEnded            = "matchEnded"
-	Substitute            = "playerSub"
-)
-
 func Get() models.Event {
 	return <-eventQueue
 }
 
-func Push(name string, value ...interface{}) {
-	event := make(models.Event)
-	event["name"] = name
-
-	switch name {
-	case PlayerDisconnected, PlayerConnected:
-		event["lobbyID"] = value[0].(uint)
-		event["playerID"] = value[1].(uint)
-	case Substitute:
-		event["lobbyID"] = value[0].(uint)
-		event["playerID"] = value[1].(uint)
-	case DisconectedFromServer, MatchEnded:
-		event["lobbyID"] = value[0].(uint)
+func PlayerDisconnected(lobbyID, playerID uint) {
+	event := models.Event{
+		"name":     "playerDisc",
+		"lobbyID":  lobbyID,
+		"playerID": playerID,
 	}
 
+	eventQueue <- event
+}
+
+func PlayerConnected(lobbyID, playerID uint) {
+	event := models.Event{
+		"name":     "playerConn",
+		"lobbyID":  lobbyID,
+		"playerID": playerID,
+	}
+	eventQueue <- event
+}
+
+func DisconnectedFromServer(lobbyID uint) {
+	event := models.Event{
+		"name":    "discFromServer",
+		"lobbyID": lobbyID,
+	}
+	eventQueue <- event
+}
+
+func Substitute(lobbyID, playerID uint) {
+	event := models.Event{
+		"name":     "playerSub",
+		"lobbyID":  lobbyID,
+		"playerID": playerID,
+	}
+
+	eventQueue <- event
+}
+
+func MatchEnded(lobbyID uint) {
+	event := models.Event{
+		"name":    "matchEnded",
+		"lobbyID": lobbyID,
+	}
 	eventQueue <- event
 }

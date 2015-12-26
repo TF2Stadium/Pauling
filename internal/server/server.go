@@ -89,7 +89,7 @@ func (s *Server) StartVerifier(ticker *time.Ticker) {
 			s.Rcon, err = TF2RconWrapper.NewTF2RconConnection(s.Info.Host, s.Info.RconPassword)
 		}
 		if count == 5 {
-			event.Push(event.DisconectedFromServer, s.LobbyId)
+			event.DisconnectedFromServer(s.LobbyId)
 			s.ServerListener.Close(s.Rcon)
 			s.StopLogListener <- struct{}{}
 			return
@@ -135,7 +135,7 @@ func (s *Server) logListener() {
 			switch message.Parsed.Type {
 			case TF2RconWrapper.WorldGameOver:
 				s.ServerListener.Close(s.Rcon)
-				event.Push(event.MatchEnded, s.LobbyId)
+				event.MatchEnded(s.LobbyId)
 				s.StopVerifier <- struct{}{}
 				return
 			case TF2RconWrapper.PlayerGlobalMessage:
@@ -148,12 +148,7 @@ func (s *Server) logListener() {
 					commID, _ := steamid.SteamIdToCommId(message.Parsed.Data.SteamId)
 					playerID := db.GetPlayerID(commID)
 
-					if playerID == 0 {
-						helpers.Logger.Error("Couldn't find player ID for %s", commID)
-						continue
-					}
-
-					event.Push(event.Substitute, s.LobbyId, commID)
+					event.Substitute(s.LobbyId, playerID)
 
 					say := fmt.Sprintf("Reporting player %s (%s)",
 						message.Parsed.Data.Username, message.Parsed.Data.SteamId)
@@ -164,7 +159,7 @@ func (s *Server) logListener() {
 
 				if s.IsPlayerAllowed(commID) {
 					playerID := db.GetPlayerID(commID)
-					event.Push(event.PlayerConnected, s.LobbyId, playerID)
+					event.PlayerConnected(s.LobbyId, playerID)
 				} else {
 					s.Rcon.KickPlayerID(message.Parsed.Data.UserId,
 						"[tf2stadium.com] You're not in the lobby...")
@@ -173,7 +168,7 @@ func (s *Server) logListener() {
 				commID, _ := steamid.SteamIdToCommId(message.Parsed.Data.SteamId)
 				if s.IsPlayerAllowed(commID) {
 					playerID := db.GetPlayerID(commID)
-					event.Push(event.PlayerDisconnected, s.LobbyId, playerID)
+					event.PlayerDisconnected(s.LobbyId, playerID)
 				}
 			}
 
@@ -334,7 +329,7 @@ func (s *Server) Verify() bool {
 	for err != nil { //TODO: Stop connection after x retries
 		if retries == 6 {
 			//Logger.Warning("#%d: Couldn't query %s after 5 retries", s.LobbyId, s.Info.Host)
-			event.Push(event.DisconectedFromServer, s.LobbyId)
+			event.DisconnectedFromServer(s.LobbyId)
 			return false
 		}
 		retries++
@@ -449,7 +444,7 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 
 	if repped {
 		playerID := db.GetPlayerID(reppedSteamID)
-		event.Push(event.Substitute, s.LobbyId, playerID)
+		event.Substitute(s.LobbyId, playerID)
 
 		say := fmt.Sprintf("Reported player %s (%s)", reppedName, reppedSteamID)
 		s.Rcon.Say(say)
