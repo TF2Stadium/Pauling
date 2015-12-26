@@ -238,20 +238,6 @@ func (s *Server) Setup() error {
 		s.Rcon.Query("mp_tournament_whitelist " + whitelist)
 	}
 
-	name, err := ConfigName(s.Map, s.Type, s.League)
-	if err != nil {
-		return err
-	}
-
-	filePath, _ := filepath.Abs("./configs/" + name)
-
-	f, err := os.Open(filePath)
-	if err != nil {
-		//Logger.Debug("%s %s", filePath, err.Error())
-		return errors.New("Config doesn't exist.")
-	}
-	f.Close()
-
 	helpers.Logger.Debug("#%d: Creating listener", s.LobbyId)
 	s.ServerListener = helpers.RconListener.CreateServerListener(s.Rcon)
 	go s.logListener()
@@ -295,25 +281,32 @@ func (s *Server) Setup() error {
 func (s *Server) ExecConfig() error {
 	var err error
 
-	filePath, err := ConfigName(s.Map, s.Type, s.League)
+	/*
+		Execute base config, then format (class limits),
+		then gamemode (dependant on league), then after_format
+	*/
+	err = ExecFile("base.cfg", s.Rcon)
 	if err != nil {
 		return err
 	}
 
-	if s.Type != models.LobbyTypeDebug {
-		err = ExecFile("base.cfg", s.Rcon)
-		if err != nil {
-			return err
-		}
+	formatString := formatMap[s.Type]
+	formatPath := fmt.Sprintf("formats/%s.cfg", formatString)
+	err = ExecFile(formatPath, s.Rcon)
+	if err != nil {
+		return err
 	}
 
-	err = ExecFile(filePath, s.Rcon)
+	gamemode := mapName[:strings.Index(s.Map, "_")]
+	mapPath := fmt.Sprintf("gamemodes/%s/%s.cfg", s.League, gamemode)
+	err = ExecFile(mapPath, s.Rcon)
+	if err != nil {
+		return err
+	}
 
-	if s.Type != models.LobbyTypeDebug {
-		err = ExecFile("after_format.cfg", s.Rcon)
-		if err != nil {
-			return err
-		}
+	err = ExecFile("after_format.cfg", s.Rcon)
+	if err != nil {
+		return err
 	}
 
 	return err

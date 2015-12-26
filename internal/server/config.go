@@ -24,22 +24,6 @@ var formatMap = map[models.LobbyType]string{
 var rMapName = regexp.MustCompile(`(.+)_(.+)`)
 var ErrInvalidMap = errors.New("Invalid Map Name.")
 
-func ConfigName(mapName string, lobbyType models.LobbyType, ruleset string) (string, error) {
-	if !rMapName.MatchString(mapName) {
-		return "", ErrInvalidMap
-	}
-
-	mapType := mapName[:strings.Index(mapName, "_")]
-	formatString := formatMap[lobbyType]
-
-	if strings.HasPrefix(mapName, "ultiduo") {
-		mapType = "koth"
-	}
-
-	file := fmt.Sprintf("%s/%s_%s.cfg", ruleset, mapType, formatString)
-	return file, nil
-}
-
 //Execute file located at path on rcon
 //TODO: Shouldn't this be in TF2RconWrapper?
 func ExecFile(path string, rcon *tf2rcon.TF2RconConnection) error {
