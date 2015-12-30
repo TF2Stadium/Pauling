@@ -23,7 +23,7 @@ type Server struct {
 	Map       string // lobby map
 	League    string
 	Type      models.LobbyType // 9v9 6v6 4v4...
-	Whitelist int
+	Whitelist string
 
 	LobbyId uint
 
@@ -203,28 +203,30 @@ func (s *Server) Setup() error {
 
 	helpers.Logger.Debug("#%d: Setting whitelist", s.LobbyId)
 	// whitelist
-	_, err = s.Rcon.Query(fmt.Sprintf("tftrue_whitelist_id %d", s.Whitelist))
+	_, err = s.Rcon.Query(fmt.Sprintf("tftrue_whitelist_id %s", s.Whitelist))
 	if err == TF2RconWrapper.ErrUnknownCommand {
 		var whitelist string
 
-		switch s.Whitelist {
-		case 3250:
+		switch {
+		case strings.HasPrefix(s.Whitelist, "etf2l_9v9"):
 			whitelist = "etf2l_whitelist_9v9.txt"
-		case 4498:
+		case strings.HasPrefix(s.Whitelist, "etf2l_6v6"):
 			whitelist = "etf2l_whitelist_6v6.txt"
-		case 3312:
+
+		case s.Whitelist == "etf2l_ultiduo":
 			whitelist = "etf2l_whitelist_ultiduo.txt"
-		case 3759:
+
+		case s.Whitelist == "etf2l_bball":
 			whitelist = "etf2l_whitelist_bball.txt"
 
-		case 3951:
+		case strings.HasPrefix(s.Whitelist, "ugc_9v9"):
 			whitelist = "item_whitelist_ugc_HL.txt"
-		case 4559:
+		case strings.HasPrefix(s.Whitelist, "ugc_6v6"):
 			whitelist = "item_whitelist_ugc_6v6.txt"
-		case 3771:
+		case strings.HasPrefix(s.Whitelist, "ugc_4v4"):
 			whitelist = "item_whitelist_ugc_4v4.txt"
 
-		case 3688:
+		case strings.HasPrefix(s.Whitelist, "esea_6v6"):
 			whitelist = "esea/item_whitelist.txt"
 			// case 4034:
 
