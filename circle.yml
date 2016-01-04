@@ -33,7 +33,7 @@ deployment:
     branch: dev
     commands:
       - mkdir binaries
-      - go build -o -race binaries/pauling-dev *.go
+      - go build -race -o binaries/pauling-dev *.go
       - mv configs binaries/configs
       - rsync -rl -e "ssh -p $SSH_PORT" binaries/* $BACKEND_USER@tf2stadium.com:$BACKEND_DEPLOY_PATH_DEV
       - ssh -p $SSH_PORT $BACKEND_USER@tf2stadium.com $BACKEND_DEPLOY_SCRIPT_DEV
