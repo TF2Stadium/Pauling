@@ -9,11 +9,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/TF2Stadium/Pauling/internal/event"
+	"github.com/TF2Stadium/Helen/models"
+	"github.com/TF2Stadium/Pauling/internal/helen"
 	"github.com/TF2Stadium/Pauling/internal/helpers"
 	"github.com/TF2Stadium/Pauling/internal/server"
-
-	"github.com/TF2Stadium/Helen/models"
 	"github.com/TF2Stadium/PlayerStatsScraper/steamid"
 	rconwrapper "github.com/TF2Stadium/TF2RconWrapper"
 	"github.com/james4k/rcon"
@@ -157,11 +156,6 @@ func (_ *Pauling) DisallowPlayer(args *models.Args, nop *Noreply) error {
 	return nil
 }
 
-func (_ *Pauling) GetEvent(args *models.Args, e *models.Event) error {
-	*e = event.Get()
-	return nil
-}
-
 func (*Pauling) Say(args *models.Args, nop *Noreply) error {
 	s, err := server.GetServer(args.Id)
 	if err != nil {
@@ -169,4 +163,9 @@ func (*Pauling) Say(args *models.Args, nop *Noreply) error {
 	}
 
 	return s.Rcon.Say(args.Text)
+}
+
+func (*Pauling) Connect(port string, nop *struct{}) error {
+	helen.Connect(port)
+	return nil
 }

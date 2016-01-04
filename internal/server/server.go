@@ -12,8 +12,7 @@ import (
 
 	"github.com/TF2Stadium/Helen/config"
 	"github.com/TF2Stadium/Helen/models"
-	"github.com/TF2Stadium/Pauling/internal/db"
-	"github.com/TF2Stadium/Pauling/internal/event"
+	"github.com/TF2Stadium/Pauling/internal/helen"
 	"github.com/TF2Stadium/Pauling/internal/helpers"
 	"github.com/TF2Stadium/PlayerStatsScraper/steamid"
 	"github.com/TF2Stadium/TF2RconWrapper"
@@ -89,7 +88,7 @@ func (s *Server) StartVerifier(ticker *time.Ticker) {
 			s.Rcon, err = TF2RconWrapper.NewTF2RconConnection(s.Info.Host, s.Info.RconPassword)
 		}
 		if count == 5 {
-			event.DisconnectedFromServer(s.LobbyId)
+			DisconnectedFromServer(s.LobbyId)
 			s.ServerListener.Close(s.Rcon)
 			s.StopLogListener <- struct{}{}
 			return
@@ -135,7 +134,7 @@ func (s *Server) logListener() {
 			switch message.Parsed.Type {
 			case TF2RconWrapper.WorldGameOver:
 				s.ServerListener.Close(s.Rcon)
-				event.MatchEnded(s.LobbyId)
+				MatchEnded(s.LobbyId)
 				s.StopVerifier <- struct{}{}
 				return
 			case TF2RconWrapper.PlayerGlobalMessage:
@@ -146,9 +145,9 @@ func (s *Server) logListener() {
 					s.report(message.Parsed.Data)
 				} else if strings.HasPrefix(text, "!sub") {
 					commID, _ := steamid.SteamIdToCommId(message.Parsed.Data.SteamId)
-					playerID := db.GetPlayerID(commID)
+					playerID := helen.GetPlayerID(commID)
 
-					event.Substitute(s.LobbyId, playerID)
+					Substitute(s.LobbyId, playerID)
 
 					say := fmt.Sprintf("Reporting player %s (%s)",
 						message.Parsed.Data.Username, message.Parsed.Data.SteamId)
@@ -158,8 +157,8 @@ func (s *Server) logListener() {
 				commID, _ := steamid.SteamIdToCommId(message.Parsed.Data.SteamId)
 
 				if s.IsPlayerAllowed(commID) {
-					playerID := db.GetPlayerID(commID)
-					event.PlayerConnected(s.LobbyId, playerID)
+					playerID := helen.GetPlayerID(commID)
+					PlayerConnected(s.LobbyId, playerID)
 				} else {
 					s.Rcon.KickPlayerID(message.Parsed.Data.UserId,
 						"[tf2stadium.com] You're not in the lobby...")
@@ -167,8 +166,8 @@ func (s *Server) logListener() {
 			case TF2RconWrapper.WorldPlayerDisconnected:
 				commID, _ := steamid.SteamIdToCommId(message.Parsed.Data.SteamId)
 				if s.IsPlayerAllowed(commID) {
-					playerID := db.GetPlayerID(commID)
-					event.PlayerDisconnected(s.LobbyId, playerID)
+					playerID := helen.GetPlayerID(commID)
+					PlayerDisconnected(s.LobbyId, playerID)
 				}
 			}
 
@@ -331,7 +330,7 @@ func (s *Server) Verify() bool {
 	for err != nil { //TODO: Stop connection after x retries
 		if retries == 6 {
 			//Logger.Warning("#%d: Couldn't query %s after 5 retries", s.LobbyId, s.Info.Host)
-			event.DisconnectedFromServer(s.LobbyId)
+			DisconnectedFromServer(s.LobbyId)
 			return false
 		}
 		retries++
@@ -349,7 +348,7 @@ func (s *Server) KickAll() error {
 }
 
 func (s *Server) IsPlayerAllowed(commId string) bool {
-	return db.IsAllowed(s.LobbyId, commId)
+	return helen.IsAllowed(s.LobbyId, commId)
 }
 
 var (
@@ -385,7 +384,7 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 	}
 
 	playerCommID, _ := steamid.SteamIdToCommId(data.SteamId)
-	team = db.GetTeam(s.LobbyId, s.Type, playerCommID)
+	team = helen.GetTeam(s.LobbyId, s.Type, playerCommID)
 
 	if matches[1] == "their" && team == "red" {
 		team = "blu"
@@ -395,14 +394,14 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 
 	//helpers.Logger.Debug("%s - %s", matches[1], team)
 
-	reppedSteamID := db.GetSlotSteamID(team, matches[2], s.LobbyId, s.Type)
+	reppedSteamID := helen.GetSlotSteamID(team, matches[2], s.LobbyId, s.Type)
 	if reppedSteamID == "" {
 		//helpers.Logger.Debug("empty")
 		return
 	}
 	//helpers.Logger.Debug(reppedSteamID)
 
-	reppedName := db.GetName(reppedSteamID)
+	reppedName := helen.GetName(reppedSteamID)
 	slot := team + matches[2]
 	//helpers.Logger.Debug(reppedName)
 
@@ -445,8 +444,8 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 	}
 
 	if repped {
-		playerID := db.GetPlayerID(reppedSteamID)
-		event.Substitute(s.LobbyId, playerID)
+		playerID := helen.GetPlayerID(reppedSteamID)
+		Substitute(s.LobbyId, playerID)
 
 		say := fmt.Sprintf("Reported player %s (%s)", reppedName, reppedSteamID)
 		s.Rcon.Say(say)

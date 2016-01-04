@@ -6,7 +6,6 @@ import (
 	_ "net/http/pprof"
 
 	"github.com/TF2Stadium/Pauling/internal"
-	"github.com/TF2Stadium/Pauling/internal/db"
 	"github.com/TF2Stadium/Pauling/internal/helpers"
 
 	"github.com/DSchalla/go-pid"
@@ -22,8 +21,6 @@ func getlocalip() string {
 }
 
 func main() {
-	db.ConnectDB()
-
 	if helpers.ProfilerEnable {
 		address := "localhost:" + helpers.PortProfiler
 		go func() {

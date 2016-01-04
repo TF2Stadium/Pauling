@@ -29,10 +29,4 @@ var (
 	PrintLogMessages = override(false, "PRINT_LOG_MESSAGES").(bool)
 	PortRcon         = override("8002", "RCON_PORT").(string)
 	PortRPC          = override("8001", "PAULING_PORT").(string)
-
-	DBHost     = override("127.0.0.1", "DATABASE_HOST").(string)
-	DBPort     = override("5432", "DATABASE_PORT").(string)
-	DBName     = override("tf2stadium", "DATABASE_NAME").(string)
-	DBUser     = override("tf2stadium", "DATABASE_USERNAME").(string)
-	DBPassword = override("dickbutt", "DATABASE_PASSWORD").(string)
 )
