@@ -5,6 +5,7 @@ machine:
     DATABASE_NAME: "circle_test"
     DATABASE_USERNAME: "ubuntu"
     DATABASE_PASSWORD: ""
+    GO15VENDOREXPERIMENT: 1
 dependencies:
   pre:
       - sudo rm -rf /usr/local/go
@@ -12,6 +13,13 @@ dependencies:
       - tar -xvf "godeb-amd64.tar.gz"
       - ./godeb install 1.5.2
       - go version
+      #Vendoring
+      - wget https://github.com/Masterminds/glide/releases/download/0.8.3/glide-0.8.3-linux-amd64.tar.gz
+      - tar -xvf glide-*.tar.gz
+      - ./linux-amd64/glide -y ./glide.yaml install
+test:
+  override:
+      - go test $(go list ./... | grep -v /vendor/)
 deployment:
   master:
     branch: master
@@ -25,7 +33,7 @@ deployment:
     branch: dev
     commands:
       - mkdir binaries
-      - go build -o binaries/pauling-dev *.go
+      - go build -o -race binaries/pauling-dev *.go
       - mv configs binaries/configs
       - rsync -rl -e "ssh -p $SSH_PORT" binaries/* $BACKEND_USER@tf2stadium.com:$BACKEND_DEPLOY_PATH_DEV
       - ssh -p $SSH_PORT $BACKEND_USER@tf2stadium.com $BACKEND_DEPLOY_SCRIPT_DEV

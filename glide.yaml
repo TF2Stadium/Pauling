@@ -1,0 +1,7 @@
+package: github.com/TF2Stadium/Pauling
+import:
+ - package: github.com/TF2Stadium/Helen
+   vcs: git
+   version: dev
+   subpackages:
+     - models
