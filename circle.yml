@@ -13,6 +13,9 @@ dependencies:
       - tar -xvf "godeb-amd64.tar.gz"
       - ./godeb install 1.5.2
       - go version
+      - mkdir -p $GOPATH/src
+      - mkdir -p $GOPATH/pkg
+      - mkdir -p $GOPATH/bin
       #Vendoring
       - wget https://github.com/Masterminds/glide/releases/download/0.8.3/glide-0.8.3-linux-amd64.tar.gz
       - tar -xvf glide-*.tar.gz
