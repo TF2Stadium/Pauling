@@ -6,6 +6,7 @@ machine:
     DATABASE_USERNAME: "ubuntu"
     DATABASE_PASSWORD: ""
     GO15VENDOREXPERIMENT: 1
+    GOPATH: "/home/ubuntu/.go_workspace"
 dependencies:
   pre:
       - sudo rm -rf /usr/local/go
