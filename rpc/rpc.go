@@ -34,6 +34,10 @@ func StartRPC() {
 	helpers.Logger.Fatal(http.Serve(l, nil))
 }
 
+func (Pauling) KeepAlive(struct{}, *struct{}) error {
+	return nil
+}
+
 func (_ *Pauling) VerifyInfo(info *models.ServerRecord, nop *Noreply) error {
 	c, err := rconwrapper.NewTF2RconConnection(info.Host, info.RconPassword)
 	if c != nil {
