@@ -125,7 +125,7 @@ func (s *Server) logListener() {
 			if helpers.PrintLogMessages {
 				helpers.Logger.Debug(message.Message)
 			}
-			//Logger.Debug(message.Message)
+			//helpers.Logger.Debug(message.Message)
 
 			if err != nil {
 				continue
