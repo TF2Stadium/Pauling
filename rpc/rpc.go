@@ -144,10 +144,6 @@ func (_ *Pauling) DisallowPlayer(args *models.Args, nop *Noreply) error {
 		return err
 	}
 
-	if !s.IsPlayerAllowed(args.SteamId) {
-		return nil
-	}
-
 	id, _ := steamid.CommIdToSteamId(args.SteamId)
 
 	players, _ := s.Rcon.GetPlayers()

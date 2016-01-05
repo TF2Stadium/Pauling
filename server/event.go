@@ -5,7 +5,7 @@ import (
 	"github.com/TF2Stadium/Pauling/helen"
 )
 
-func send(e rpc.Event) { helen.Client.Call("Event.Handle", e, struct{}{}) }
+func send(e rpc.Event) { helen.Call("Event.Handle", e, struct{}{}) }
 
 func PlayerDisconnected(lobbyID, playerID uint) {
 	e := rpc.Event{

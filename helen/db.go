@@ -1,19 +1,34 @@
 package helen
 
 import (
+	"net/rpc"
+
 	"github.com/TF2Stadium/Helen/models"
 	helen "github.com/TF2Stadium/Helen/rpc"
+	"github.com/TF2Stadium/Pauling/helpers"
 )
+
+func Call(method string, args interface{}, reply interface{}) error {
+	client, err := rpc.DialHTTP("tcp", "localhost:"+Port)
+	if err != nil {
+		helpers.Logger.Error(err.Error())
+		return err
+	}
+	err = client.Call(method, args, reply)
+	client.Close()
+
+	return err
+}
 
 // GetPlayerID returns a player ID (primary key), given their Steam Community id
 func GetPlayerID(steamid string) (id uint) {
-	Client.Call("Helen.GetPlayerID", steamid, &id)
+	Call("Helen.GetPlayerID", steamid, &id)
 	return
 }
 
 // GetTeam returns the player's team, given the player's steamid and the lobby id
 func GetTeam(lobbyID uint, lobbyType models.LobbyType, steamID string) (team string) {
-	Client.Call("Helen.GetTeam", helen.Args{LobbyID: lobbyID, Type: lobbyType, SteamID: steamID}, &team)
+	Call("Helen.GetTeam", helen.Args{LobbyID: lobbyID, Type: lobbyType, SteamID: steamID}, &team)
 	return
 }
 
@@ -27,18 +42,21 @@ func GetSlotSteamID(team, class string, lobbyID uint, lobbyType models.LobbyType
 		Class: class,
 	}
 
-	Client.Call("Helen.GetSteamIDFromSlot", args, &steamID)
+	Call("Helen.GetSteamIDFromSlot", args, &steamID)
 
 	return
 }
 
 // GetName returns the name for a plyer given their steam ID
 func GetName(steamID string) (name string) {
-	Client.Call("Helen.GetNameFromSteamID", steamID, &name)
+	Call("Helen.GetNameFromSteamID", steamID, &name)
 	return
 }
 
 func IsAllowed(lobbyID uint, steamID string) (allowed bool) {
-	Client.Call("Helen.IsAllowed", helen.Args{LobbyID: lobbyID, SteamID: steamID}, &allowed)
+	err := Call("Helen.IsAllowed", helen.Args{LobbyID: lobbyID, SteamID: steamID}, &allowed)
+	if err != nil {
+		helpers.Logger.Error(err.Error())
+	}
 	return
 }
