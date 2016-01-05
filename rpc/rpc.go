@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/TF2Stadium/Helen/models"
-	"github.com/TF2Stadium/Pauling/internal/helen"
-	"github.com/TF2Stadium/Pauling/internal/helpers"
-	"github.com/TF2Stadium/Pauling/internal/server"
+	"github.com/TF2Stadium/Pauling/helen"
+	"github.com/TF2Stadium/Pauling/helpers"
+	"github.com/TF2Stadium/Pauling/server"
 	"github.com/TF2Stadium/PlayerStatsScraper/steamid"
 	rconwrapper "github.com/TF2Stadium/TF2RconWrapper"
 	"github.com/james4k/rcon"

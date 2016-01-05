@@ -5,8 +5,8 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 
-	"github.com/TF2Stadium/Pauling/internal"
-	"github.com/TF2Stadium/Pauling/internal/helpers"
+	"github.com/TF2Stadium/Pauling/helpers"
+	"github.com/TF2Stadium/Pauling/rpc"
 
 	"github.com/DSchalla/go-pid"
 )

@@ -3,7 +3,7 @@ package helen
 import (
 	"net/rpc"
 
-	"github.com/TF2Stadium/Pauling/internal/helpers"
+	"github.com/TF2Stadium/Pauling/helpers"
 )
 
 var Client *rpc.Client

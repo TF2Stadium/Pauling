@@ -12,8 +12,8 @@ import (
 
 	"github.com/TF2Stadium/Helen/config"
 	"github.com/TF2Stadium/Helen/models"
-	"github.com/TF2Stadium/Pauling/internal/helen"
-	"github.com/TF2Stadium/Pauling/internal/helpers"
+	"github.com/TF2Stadium/Pauling/helen"
+	"github.com/TF2Stadium/Pauling/helpers"
 	"github.com/TF2Stadium/PlayerStatsScraper/steamid"
 	"github.com/TF2Stadium/TF2RconWrapper"
 )

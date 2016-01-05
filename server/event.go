@@ -2,7 +2,7 @@ package server
 
 import (
 	"github.com/TF2Stadium/Helen/rpc"
-	"github.com/TF2Stadium/Pauling/internal/helen"
+	"github.com/TF2Stadium/Pauling/helen"
 )
 
 func send(e rpc.Event) { helen.Client.Call("Event.Handle", e, struct{}{}) }
