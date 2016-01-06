@@ -8,8 +8,20 @@ import (
 	"github.com/TF2Stadium/Pauling/helpers"
 )
 
+func CheckConnection() {
+	client, err := rpc.DialHTTP("tcp", "localhost:"+helpers.PortHelen)
+	if err != nil {
+		helpers.Logger.Fatal(err.Error())
+	}
+	err = client.Call("Helen.Test", struct{}{}, &struct{}{})
+	if err != nil {
+		helpers.Logger.Fatal(err.Error())
+	}
+	helpers.Logger.Debug("Able to connect to Helen")
+}
+
 func Call(method string, args interface{}, reply interface{}) error {
-	client, err := rpc.DialHTTP("tcp", "localhost:"+Port)
+	client, err := rpc.DialHTTP("tcp", "localhost:"+helpers.PortHelen)
 	if err != nil {
 		helpers.Logger.Error(err.Error())
 		return err
