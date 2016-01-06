@@ -18,9 +18,9 @@ dependencies:
       - mkdir -p $GOPATH/pkg
       - mkdir -p $GOPATH/bin
       #Vendoring
-      - wget https://github.com/Masterminds/glide/releases/download/0.8.3/glide-0.8.3-linux-amd64.tar.gz
-      - tar -xvf glide-*.tar.gz
-      - ./linux-amd64/glide -y ./glide.yaml install
+      #- wget https://github.com/Masterminds/glide/releases/download/0.8.3/glide-0.8.3-linux-amd64.tar.gz
+      #- tar -xvf glide-*.tar.gz
+      #- ./linux-amd64/glide -y ./glide.yaml install
 test:
   override:
       - go test $(go list ./... | grep -v /vendor/)
