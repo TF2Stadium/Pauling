@@ -5,3 +5,5 @@ import:
    version: dev
    subpackages:
      - models
+ - package: github.com/rakyll/gom
+   vcs: git
