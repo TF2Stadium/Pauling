@@ -29,4 +29,5 @@ var (
 	PrintLogMessages = override(false, "PRINT_LOG_MESSAGES").(bool)
 	PortRcon         = override("8002", "RCON_PORT").(string)
 	PortRPC          = override("8001", "PAULING_PORT").(string)
+	PortHelen        = override("8081", "HELEN_PORT").(string)
 )
