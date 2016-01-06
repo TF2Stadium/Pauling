@@ -20,6 +20,8 @@ func getlocalip() string {
 
 func init() {
 	initLogger()
+	initConstants()
+
 	Logger.Debug("Getting IP Address")
 	ip := getlocalip()
 	var err error

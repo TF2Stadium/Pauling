@@ -9,6 +9,7 @@ func override(val interface{}, env string) interface{} {
 	case string:
 		if envVar != "" {
 			val = envVar
+			Logger.Debug("%s = %s", env, val.(string))
 		}
 
 	case bool:
@@ -16,6 +17,7 @@ func override(val interface{}, env string) interface{} {
 			val = map[string]bool{
 				"true": true,
 			}[envVar]
+			Logger.Debug("%s = %s", env, val.(bool))
 		}
 	}
 
@@ -23,11 +25,21 @@ func override(val interface{}, env string) interface{} {
 }
 
 var (
-	PortProfiler   = override("6061", "PROFILER_PORT").(string)
+	PortProfiler   string
+	ProfilerEnable bool
+
+	PrintLogMessages bool
+	PortRcon         string
+	PortRPC          string
+	PortHelen        string
+)
+
+func initConstants() {
+	PortProfiler = override("6061", "PROFILER_PORT").(string)
 	ProfilerEnable = override(false, "PROFILER_ENABLE").(bool)
 
 	PrintLogMessages = override(false, "PRINT_LOG_MESSAGES").(bool)
-	PortRcon         = override("8002", "RCON_PORT").(string)
-	PortRPC          = override("8001", "PAULING_PORT").(string)
-	PortHelen        = override("8081", "HELEN_PORT").(string)
-)
+	PortRcon = override("8002", "RCON_PORT").(string)
+	PortRPC = override("8001", "PAULING_PORT").(string)
+	PortHelen = override("8081", "HELEN_PORT").(string)
+}
