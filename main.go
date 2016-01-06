@@ -3,12 +3,11 @@ package main
 import (
 	"io/ioutil"
 	"net/http"
-	_ "net/http/pprof"
-
-	"github.com/TF2Stadium/Pauling/helpers"
-	"github.com/TF2Stadium/Pauling/rpc"
 
 	"github.com/DSchalla/go-pid"
+	"github.com/TF2Stadium/Pauling/helpers"
+	"github.com/TF2Stadium/Pauling/rpc"
+	_ "github.com/rakyll/gom/http"
 )
 
 func getlocalip() string {
