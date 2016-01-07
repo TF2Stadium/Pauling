@@ -281,7 +281,7 @@ func (s *Server) Setup() error {
 		if err = s.ExecConfig(); err != nil {
 			return err
 		}
-
+		s.Rcon.Query("tftrue_no_hats 0")
 	}
 
 	helpers.Logger.Debug("#%d: Configured", s.LobbyId)
@@ -385,7 +385,7 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 
 	playerCommID, _ := steamid.SteamIdToCommId(data.SteamId)
 	team = helen.GetTeam(s.LobbyId, s.Type, playerCommID)
-
+	//	helpers.Logger.Debug(team)
 	if matches[1] == "their" && team == "red" {
 		team = "blu"
 	} else if matches[1] != "our" {
@@ -396,14 +396,14 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 
 	reppedSteamID := helen.GetSlotSteamID(team, matches[2], s.LobbyId, s.Type)
 	if reppedSteamID == "" {
-		//helpers.Logger.Debug("empty")
+		//		helpers.Logger.Debug("empty")
 		return
 	}
-	//helpers.Logger.Debug(reppedSteamID)
+	//	helpers.Logger.Debug(reppedSteamID)
 
 	reppedName := helen.GetName(reppedSteamID)
 	slot := team + matches[2]
-	//helpers.Logger.Debug(reppedName)
+	//	helpers.Logger.Debug(reppedName)
 
 	s.PlayersRep.RLock()
 	if s.PlayersRep.Map[data.SteamId+slot] {
