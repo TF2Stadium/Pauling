@@ -275,10 +275,12 @@ func (s *Server) Setup() error {
 			s.Rcon, err = TF2RconWrapper.NewTF2RconConnection(s.Info.Host, s.Info.RconPassword)
 		}
 		if count == 5 {
+			helpers.Logger.Error("#%d: %s", s.LobbyId, err.Error())
 			return err
 		}
 
 		if err = s.ExecConfig(); err != nil {
+			helpers.Logger.Error("#%d: %s", s.LobbyId, err.Error())
 			return err
 		}
 		s.Rcon.Query("tftrue_no_hats 0")
