@@ -138,33 +138,36 @@ func (s *Server) logListener() {
 				s.StopVerifier <- struct{}{}
 				return
 			case TF2RconWrapper.PlayerGlobalMessage:
-				text := message.Parsed.Data.Text
+				playerData := message.Parsed.Data.(TF2RconWrapper.PlayerData)
+				text := playerData.Text
 				//Logger.Debug("GLOBAL %s:", text)
 
 				if strings.HasPrefix(text, "!rep") {
-					s.report(message.Parsed.Data)
+					s.report(playerData)
 				} else if strings.HasPrefix(text, "!sub") {
-					commID, _ := steamid.SteamIdToCommId(message.Parsed.Data.SteamId)
+					commID, _ := steamid.SteamIdToCommId(playerData.SteamId)
 					playerID := helen.GetPlayerID(commID)
 
 					Substitute(s.LobbyId, playerID)
 
 					say := fmt.Sprintf("Reporting player %s (%s)",
-						message.Parsed.Data.Username, message.Parsed.Data.SteamId)
+						playerData.Username, playerData.SteamId)
 					s.Rcon.Say(say)
 				}
 			case TF2RconWrapper.WorldPlayerConnected:
-				commID, _ := steamid.SteamIdToCommId(message.Parsed.Data.SteamId)
+				playerData := message.Parsed.Data.(TF2RconWrapper.PlayerData)
+				commID, _ := steamid.SteamIdToCommId(playerData.SteamId)
 
 				if s.IsPlayerAllowed(commID) {
 					playerID := helen.GetPlayerID(commID)
 					PlayerConnected(s.LobbyId, playerID)
 				} else {
-					s.Rcon.KickPlayerID(message.Parsed.Data.UserId,
+					s.Rcon.KickPlayerID(playerData.UserId,
 						"[tf2stadium.com] You're not in the lobby...")
 				}
 			case TF2RconWrapper.WorldPlayerDisconnected:
-				commID, _ := steamid.SteamIdToCommId(message.Parsed.Data.SteamId)
+				playerData := message.Parsed.Data.(TF2RconWrapper.PlayerData)
+				commID, _ := steamid.SteamIdToCommId(playerData.SteamId)
 				if s.IsPlayerAllowed(commID) {
 					playerID := helen.GetPlayerID(commID)
 					PlayerDisconnected(s.LobbyId, playerID)
