@@ -380,6 +380,7 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 	if matches[1] == "their" && team == "red" {
 		team = "blu"
 	} else if matches[1] != "our" {
+		s.Rcon.Say("Usage: !rep our/their class")
 		return
 	}
 
