@@ -377,8 +377,12 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 	team = helen.GetTeam(s.LobbyId, s.Type, source)
 	//	helpers.Logger.Debug(team)
 	originTeam := team
-	if matches[1] == "their" && team == "red" {
-		team = "blu"
+	if matches[1] == "their" {
+		if team == "red" {
+			team = "blu"
+		} else {
+			team = "red"
+		}
 	} else if matches[1] != "our" {
 		s.Rcon.Say("Usage: !rep our/their class")
 		return
