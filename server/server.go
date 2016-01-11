@@ -399,6 +399,7 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 	err := newReport(source, target, s.LobbyId)
 	if err != nil {
 		if _, ok := err.(repError); ok {
+			s.Rcon.Say("!rep: Already reported")
 			helpers.Logger.Error(err.Error())
 		} else {
 			helpers.Logger.Error(err.Error())
