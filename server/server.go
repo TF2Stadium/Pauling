@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/TF2Stadium/Helen/config"
@@ -26,16 +25,7 @@ type Server struct {
 
 	LobbyId uint
 
-	Reps struct {
-		Map map[string]int
-		*sync.RWMutex
-	}
-
-	PlayersRep struct {
-		Map map[string]bool
-		*sync.RWMutex
-	}
-
+	StopRepTimer    map[string]chan struct{}
 	StopVerifier    chan struct{}
 	StopLogListener chan struct{}
 
@@ -47,16 +37,7 @@ type Server struct {
 
 func NewServer() *Server {
 	s := &Server{
-		Reps: struct {
-			Map map[string]int
-			*sync.RWMutex
-		}{make(map[string]int), new(sync.RWMutex)},
-
-		PlayersRep: struct {
-			Map map[string]bool
-			*sync.RWMutex
-		}{make(map[string]bool), new(sync.RWMutex)},
-
+		StopRepTimer:    make(map[string]chan struct{}),
 		StopVerifier:    make(chan struct{}),
 		StopLogListener: make(chan struct{}),
 	}
@@ -384,16 +365,6 @@ var (
 	}
 )
 
-func (s *Server) clearReps(slot string) {
-	s.PlayersRep.Lock()
-	for entry, _ := range s.PlayersRep.Map {
-		if strings.HasSuffix(entry, slot) {
-			delete(s.PlayersRep.Map, entry)
-		}
-	}
-	s.PlayersRep.Unlock()
-}
-
 func (s *Server) report(data TF2RconWrapper.PlayerData) {
 	var team string
 
@@ -402,86 +373,62 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 		return
 	}
 
-	playerCommID, _ := steamid.SteamIdToCommId(data.SteamId)
-	team = helen.GetTeam(s.LobbyId, s.Type, playerCommID)
+	source, _ := steamid.SteamIdToCommId(data.SteamId)
+	team = helen.GetTeam(s.LobbyId, s.Type, source)
 	//	helpers.Logger.Debug(team)
+	originTeam := team
 	if matches[1] == "their" && team == "red" {
 		team = "blu"
 	} else if matches[1] != "our" {
 		return
 	}
 
-	//helpers.Logger.Debug("%s - %s", matches[1], team)
+	target := helen.GetSlotSteamID(team, matches[2], s.LobbyId, s.Type)
+	helpers.Logger.Debug("#%d: %s (team %s) reporting %s (team %s)", s.LobbyId, target, originTeam, target, team)
 
-	reppedSteamID := helen.GetSlotSteamID(team, matches[2], s.LobbyId, s.Type)
-	if reppedSteamID == "" {
-		//		helpers.Logger.Debug("empty")
+	err := newReport(source, target, s.LobbyId)
+	if err != nil {
+		if _, ok := err.(repError); ok {
+			helpers.Logger.Error(err.Error())
+		} else {
+			helpers.Logger.Error(err.Error())
+		}
 		return
 	}
-	//	helpers.Logger.Debug(reppedSteamID)
 
-	reppedName := helen.GetName(reppedSteamID)
-	slot := team + matches[2]
-	//	helpers.Logger.Debug(reppedName)
+	curReps := countReports(target, s.LobbyId)
 
-	s.PlayersRep.RLock()
-	if s.PlayersRep.Map[data.SteamId+slot] {
-		s.PlayersRep.RUnlock()
-		return
-	}
-	s.PlayersRep.RUnlock()
+	switch curReps {
+	case repsNeeded[s.Type]:
+		//Got needed number of reports, ask helen to substitute player
+		helpers.Logger.Debug("Reported")
+		name := helen.GetName(target)
 
-	s.Reps.Lock()
-	s.Reps.Map[reppedSteamID]++
-	votes := s.Reps.Map[reppedSteamID]
-	repped := (s.Reps.Map[reppedSteamID] == repsNeeded[s.Type])
-	if repped {
-		s.Reps.Map[reppedSteamID] = 0
-	}
-	s.Reps.Unlock()
-
-	if votes == 1 {
-		c := make(chan struct{})
-		stopRepTimeout[s.LobbyId] = c
-		tick := time.After(time.Minute * 1)
-
-		go func() {
-			for {
-				select {
-				case <-tick:
-					s.Reps.Lock()
-					s.Reps.Map[reppedSteamID] = 0
-					s.Reps.Unlock()
-					s.Rcon.Say("Not sufficient votes after 1 minute, player not reported.")
-					s.clearReps(slot)
-					return
-				case <-c:
-					return
-				}
-			}
-		}()
-	}
-
-	if repped {
-		playerID := helen.GetPlayerID(reppedSteamID)
+		s.Rcon.Sayf("Reporting %s %s: %s", team, matches[1], name)
+		playerID := helen.GetPlayerID(target)
 		Substitute(s.LobbyId, playerID)
 
-		say := fmt.Sprintf("Reported player %s (%s)", reppedName, reppedSteamID)
-		s.Rcon.Say(say)
-		stopRepTimeout[s.LobbyId] <- struct{}{}
-		close(stopRepTimeout[s.LobbyId])
-		s.clearReps(slot)
+		resetReportCount(target, s.LobbyId)
+		//tell timeout goroutine to stop
+		s.StopRepTimer[team+matches[1]] <- struct{}{}
 
-	} else {
+	case 1:
+		//first report happened, reset reps one minute later to 0, unless told to stop
+		ticker := time.NewTicker(1 * time.Minute)
+		stop := make(chan struct{})
+		s.StopRepTimer[team+matches[1]] = stop
 
-		say := fmt.Sprintf("Reporting %s (%s): %d/%d votes",
-			reppedName, reppedSteamID, votes, repsNeeded[s.Type])
-		s.Rcon.Say(say)
-		s.PlayersRep.Lock()
-		s.PlayersRep.Map[data.SteamId+slot] = true
-		s.PlayersRep.Unlock()
+		go func() {
+			select {
+			case <-ticker.C:
+				s.Rcon.Sayf("Reporting %s %s failed, couldn't get enough !rep in 1 minute.", team, matches[1])
+			case <-stop:
+				return
+			}
+		}()
 
+	default:
+		helpers.Logger.Debug("Got %d reports", curReps)
 	}
-
 	return
 }
