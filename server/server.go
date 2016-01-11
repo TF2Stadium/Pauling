@@ -372,11 +372,16 @@ var (
 	}
 )
 
+func (s *Server) repUsage() {
+	s.Rcon.Say("Usage: !rep our/their class")
+}
+
 func (s *Server) report(data TF2RconWrapper.PlayerData) {
 	var team string
 
 	matches := rReport.FindStringSubmatch(data.Text)
 	if len(matches) != 3 {
+		s.repUsage()
 		return
 	}
 
@@ -391,7 +396,7 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 			team = "red"
 		}
 	} else if matches[1] != "our" {
-		s.Rcon.Say("Usage: !rep our/their class")
+		s.repUsage()
 		return
 	}
 
