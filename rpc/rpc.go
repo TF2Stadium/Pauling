@@ -140,6 +140,7 @@ func (_ *Pauling) DisallowPlayer(args *models.Args, nop *Noreply) error {
 	}
 
 	id, _ := steamid.CommIdToSteamId(args.SteamId)
+	server.ResetReportCount(id, args.Id)
 
 	players, _ := s.Rcon.GetPlayers()
 	for _, player := range players {
