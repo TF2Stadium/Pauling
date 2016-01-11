@@ -127,14 +127,20 @@ func (s *Server) logListener() {
 				if strings.HasPrefix(text, "!rep") {
 					s.report(playerData)
 				} else if strings.HasPrefix(text, "!sub") {
-					commID, _ := steamid.SteamIdToCommId(playerData.SteamId)
-					playerID := helen.GetPlayerID(commID)
+					if rFirstSubArg.FindStringSubmatch(text) != nil {
+						// If they tried to use !sub with an argument, they
+						// probably meant to !rep
+						s.Rcon.Say("!sub is for replacing yourself, !rep reports others.")
+					} else {
+						commID, _ := steamid.SteamIdToCommId(playerData.SteamId)
+						playerID := helen.GetPlayerID(commID)
 
-					Substitute(s.LobbyId, playerID)
+						Substitute(s.LobbyId, playerID)
 
-					say := fmt.Sprintf("Reporting player %s (%s)",
-						playerData.Username, playerData.SteamId)
-					s.Rcon.Say(say)
+						say := fmt.Sprintf("Reporting player %s (%s)",
+							playerData.Username, playerData.SteamId)
+						s.Rcon.Say(say)
+					}
 				}
 
 			case TF2RconWrapper.WorldPlayerConnected:
@@ -353,6 +359,7 @@ func (s *Server) IsPlayerAllowed(commId string) bool {
 
 var (
 	rReport        = regexp.MustCompile(`^!rep\s+(.+)\s+(.+)`)
+	rFirstSubArg   = regexp.MustCompile(`^!sub\s+(.+)`)
 	stopRepTimeout = make(map[uint](chan struct{}))
 
 	repsNeeded = map[models.LobbyType]int{
