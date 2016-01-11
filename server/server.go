@@ -401,10 +401,9 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 		return
 	}
 
-	helpers.Logger.Debug("#%d: %s (team %s) reporting %s (team %s)", s.LobbyId, data.SteamId, originTeam, target, team)
+	helpers.Logger.Debug("#%d: %s (team %s) reporting %s (team %s)", s.LobbyId, source, originTeam, target, team)
 
-	// TODO: Broken, data.SteamId is in [U:1:33570663] format...
-	if target == data.SteamId {
+	if target == source {
 		// !rep'ing themselves
 		playerID := helen.GetPlayerID(source)
 		Substitute(s.LobbyId, playerID)
@@ -427,17 +426,16 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 
 	curReps := countReports(target, s.LobbyId)
 
+	name := helen.GetName(target)
 	switch curReps {
 	case repsNeeded[s.Type]:
 		//Got needed number of reports, ask helen to substitute player
 		helpers.Logger.Debug("Reported")
-		name := helen.GetName(target)
 
 		s.Rcon.Sayf("Reporting %s %s: %s", team, matches[1], name)
 		playerID := helen.GetPlayerID(target)
 		Substitute(s.LobbyId, playerID)
 
-		resetReportCount(target, s.LobbyId)
 		//tell timeout goroutine to stop
 		s.StopRepTimer[team+matches[1]] <- struct{}{}
 
@@ -457,6 +455,7 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 		}()
 
 	default:
+		s.Rcon.Sayf("Got %d votes votes for reporting player %s (%d needed)", curReps, name, repsNeeded[s.Type])
 		helpers.Logger.Debug("Got %d reports", curReps)
 	}
 	return
