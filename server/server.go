@@ -401,7 +401,18 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 		return
 	}
 
-	helpers.Logger.Debug("#%d: %s (team %s) reporting %s (team %s)", s.LobbyId, target, originTeam, target, team)
+	helpers.Logger.Debug("#%d: %s (team %s) reporting %s (team %s)", s.LobbyId, data.SteamId, originTeam, target, team)
+
+	// TODO: Broken, data.SteamId is in [U:1:33570663] format...
+	if target == data.SteamId {
+		// !rep'ing themselves
+		playerID := helen.GetPlayerID(source)
+		Substitute(s.LobbyId, playerID)
+
+		say := fmt.Sprintf("Reporting player %s (%s)", data.Username, data.SteamId)
+		s.Rcon.Say(say)
+		return
+	}
 
 	err := newReport(source, target, s.LobbyId)
 	if err != nil {
