@@ -385,6 +385,11 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 	}
 
 	target := helen.GetSlotSteamID(team, matches[2], s.LobbyId, s.Type)
+	if target == "" {
+		s.Rcon.Say("!rep: Unknown or empty slot")
+		return
+	}
+
 	helpers.Logger.Debug("#%d: %s (team %s) reporting %s (team %s)", s.LobbyId, target, originTeam, target, team)
 
 	err := newReport(source, target, s.LobbyId)
