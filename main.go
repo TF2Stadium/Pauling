@@ -6,6 +6,7 @@ import (
 
 	"github.com/DSchalla/go-pid"
 	"github.com/TF2Stadium/Pauling/helpers"
+	"github.com/TF2Stadium/Pauling/server"
 	"github.com/TF2Stadium/Pauling/rpc"
 	_ "github.com/rakyll/gom/http"
 )
@@ -32,6 +33,7 @@ func main() {
 	if pid.Create() == nil {
 		defer pid.Remove()
 	}
+	server.CreateDB()
 	rpc.StartRPC()
 	//PushEvent("getServers")
 }
