@@ -127,14 +127,20 @@ func (s *Server) logListener() {
 				if strings.HasPrefix(text, "!rep") {
 					s.report(playerData)
 				} else if strings.HasPrefix(text, "!sub") {
-					commID, _ := steamid.SteamIdToCommId(playerData.SteamId)
-					playerID := helen.GetPlayerID(commID)
+					if rFirstSubArg.FindStringSubmatch(text) != nil {
+						// If they tried to use !sub with an argument, they
+						// probably meant to !rep
+						s.Rcon.Say("!sub is for replacing yourself, !rep reports others.")
+					} else {
+						commID, _ := steamid.SteamIdToCommId(playerData.SteamId)
+						playerID := helen.GetPlayerID(commID)
 
-					Substitute(s.LobbyId, playerID)
+						Substitute(s.LobbyId, playerID)
 
-					say := fmt.Sprintf("Reporting player %s (%s)",
-						playerData.Username, playerData.SteamId)
-					s.Rcon.Say(say)
+						say := fmt.Sprintf("Reporting player %s (%s)",
+							playerData.Username, playerData.SteamId)
+						s.Rcon.Say(say)
+					}
 				}
 
 			case TF2RconWrapper.WorldPlayerConnected:
@@ -353,6 +359,7 @@ func (s *Server) IsPlayerAllowed(commId string) bool {
 
 var (
 	rReport        = regexp.MustCompile(`^!rep\s+(.+)\s+(.+)`)
+	rFirstSubArg   = regexp.MustCompile(`^!sub\s+(.+)`)
 	stopRepTimeout = make(map[uint](chan struct{}))
 
 	repsNeeded = map[models.LobbyType]int{
@@ -377,18 +384,40 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 	team = helen.GetTeam(s.LobbyId, s.Type, source)
 	//	helpers.Logger.Debug(team)
 	originTeam := team
-	if matches[1] == "their" && team == "red" {
-		team = "blu"
+	if matches[1] == "their" {
+		if team == "red" {
+			team = "blu"
+		} else {
+			team = "red"
+		}
 	} else if matches[1] != "our" {
+		s.Rcon.Say("Usage: !rep our/their class")
 		return
 	}
 
 	target := helen.GetSlotSteamID(team, matches[2], s.LobbyId, s.Type)
-	helpers.Logger.Debug("#%d: %s (team %s) reporting %s (team %s)", s.LobbyId, target, originTeam, target, team)
+	if target == "" {
+		s.Rcon.Say("!rep: Unknown or empty slot")
+		return
+	}
+
+	helpers.Logger.Debug("#%d: %s (team %s) reporting %s (team %s)", s.LobbyId, data.SteamId, originTeam, target, team)
+
+	// TODO: Broken, data.SteamId is in [U:1:33570663] format...
+	if target == data.SteamId {
+		// !rep'ing themselves
+		playerID := helen.GetPlayerID(source)
+		Substitute(s.LobbyId, playerID)
+
+		say := fmt.Sprintf("Reporting player %s (%s)", data.Username, data.SteamId)
+		s.Rcon.Say(say)
+		return
+	}
 
 	err := newReport(source, target, s.LobbyId)
 	if err != nil {
 		if _, ok := err.(repError); ok {
+			s.Rcon.Say("!rep: Already reported")
 			helpers.Logger.Error(err.Error())
 		} else {
 			helpers.Logger.Error(err.Error())
