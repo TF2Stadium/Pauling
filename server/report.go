@@ -44,10 +44,13 @@ func CreateDB() {
 
 func hasReported(source, target string, lobbyID uint) bool {
 	rows, err := db.Query("SELECT id FROM reports WHERE source_player_id = $1 AND target_player_id = $2 AND lobby_id = $3", source, target, lobbyID)
+	defer rows.Close()
 	if err != nil {
 		helpers.Logger.Error(err.Error())
 	}
-	return rows.Next()
+
+	ok := rows.Next()
+	return ok
 }
 
 func newReport(source, target string, lobbyID uint) error {
@@ -61,13 +64,15 @@ func newReport(source, target string, lobbyID uint) error {
 	return err
 }
 
-func resetReportCount(target string, lobbyID uint) error {
+//ResetReportCount resets the !rep count for the given player in lobby lobbyID
+func ResetReportCount(target string, lobbyID uint) error {
 	_, err := db.Exec("DELETE FROM reports WHERE target_player_id = $1 AND lobby_id = $2", target, lobbyID)
 	return err
 }
 
 func countReports(target string, lobbyID uint) int {
 	rows, err := db.Query("SELECT id FROM reports WHERE target_player_id = $1 AND lobby_id = $2", target, lobbyID)
+	defer rows.Close()
 	if err != nil {
 		helpers.Logger.Error(err.Error())
 		return 0
