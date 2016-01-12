@@ -418,6 +418,7 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 		playerID := helen.GetPlayerID(source)
 		Substitute(s.LobbyId, playerID)
 
+		helpers.Logger.Debug("repported target == source")
 		say := fmt.Sprintf("Reporting player %s (%s)", data.Username, data.SteamId)
 		s.Rcon.Say(say)
 		return
