@@ -429,6 +429,7 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 			s.Rcon.Say("!rep: Already reported")
 			helpers.Logger.Error(err.Error())
 		} else {
+			s.Rcon.Say("!rep: Reporting system error")
 			helpers.Logger.Error(err.Error())
 		}
 		return
