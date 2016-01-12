@@ -373,7 +373,7 @@ var (
 )
 
 func (s *Server) repUsage() {
-	s.Rcon.Say("Usage: !rep our/their class")
+	s.Rcon.Say("Usage: !rep our/their/red/blu slotname")
 }
 
 func (s *Server) report(data TF2RconWrapper.PlayerData) {
@@ -385,22 +385,27 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 		return
 	}
 
+	argTeam := strings.ToLower(matches[1])
+	argSlot := strings.ToLower(matches[2])
+
 	source, _ := steamid.SteamIdToCommId(data.SteamId)
 	team = helen.GetTeam(s.LobbyId, s.Type, source)
 	//	helpers.Logger.Debug(team)
 	originTeam := team
-	if matches[1] == "their" {
+	if argTeam == "their" {
 		if team == "red" {
 			team = "blu"
 		} else {
 			team = "red"
 		}
-	} else if matches[1] != "our" {
+	} else if argTeam == "blu" || argTeam == "red" {
+		team = argTeam
+	} else if argTeam != "our" {
 		s.repUsage()
 		return
 	}
 
-	target := helen.GetSlotSteamID(team, matches[2], s.LobbyId, s.Type)
+	target := helen.GetSlotSteamID(team, argSlot, s.LobbyId, s.Type)
 	if target == "" {
 		s.Rcon.Say("!rep: Unknown or empty slot")
 		return
@@ -437,26 +442,27 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 		//Got needed number of reports, ask helen to substitute player
 		helpers.Logger.Debug("Reported")
 
-		s.Rcon.Sayf("Reporting %s %s: %s", team, matches[1], name)
+		s.Rcon.Sayf("Reporting %s %s: %s", team, argSlot, name)
 		playerID := helen.GetPlayerID(target)
 		Substitute(s.LobbyId, playerID)
 
 		//tell timeout goroutine to stop
-		s.StopRepTimer[team+matches[1]] <- struct{}{}
+		s.StopRepTimer[team+argSlot] <- struct{}{}
 
 	case 1:
 		//first report happened, reset reps one minute later to 0, unless told to stop
 		ticker := time.NewTicker(1 * time.Minute)
 		stop := make(chan struct{})
-		s.StopRepTimer[team+matches[1]] = stop
+		s.StopRepTimer[team+argSlot] = stop
 
 		go func() {
 			select {
 			case <-ticker.C:
-				s.Rcon.Sayf("Reporting %s %s failed, couldn't get enough !rep in 1 minute.", team, matches[1])
+				s.Rcon.Sayf("Reporting %s %s failed, couldn't get enough !rep in 1 minute.", team, argSlot)
 			case <-stop:
 				return
 			}
+			delete(s.StopRepTimer, team+argSlot)
 		}()
 
 	default:
