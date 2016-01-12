@@ -6,8 +6,8 @@ import (
 
 	"github.com/DSchalla/go-pid"
 	"github.com/TF2Stadium/Pauling/helpers"
-	"github.com/TF2Stadium/Pauling/server"
 	"github.com/TF2Stadium/Pauling/rpc"
+	"github.com/TF2Stadium/Pauling/server"
 	_ "github.com/rakyll/gom/http"
 )
 
