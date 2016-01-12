@@ -10,6 +10,7 @@ import (
 )
 
 func TestConfigName(t *testing.T) {
+	t.Parallel()
 	configPath, _ := filepath.Abs("../configs/")
 	cases := []struct {
 		mapName   string
