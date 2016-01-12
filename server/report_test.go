@@ -3,7 +3,6 @@ package server
 import (
 	"testing"
 
-	"github.com/TF2Stadium/Pauling/helpers"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -12,6 +11,7 @@ func init() {
 }
 
 func TestNewReport(t *testing.T) {
+	t.Parallel()
 	var (
 		source       = "1"
 		target       = "2"
@@ -23,9 +23,9 @@ func TestNewReport(t *testing.T) {
 
 	assert.True(t, hasReported(source, target, lobbyID))
 	assert.Equal(t, countReports(target, lobbyID), 1)
-	helpers.Logger.Debug("hi")
 
 	err = ResetReportCount(target, 3)
 	assert.NoError(t, err)
 	assert.Zero(t, countReports(target, lobbyID))
+	assert.False(t, hasReported(source, target, lobbyID))
 }
