@@ -446,8 +446,12 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 		playerID := helen.GetPlayerID(target)
 		Substitute(s.LobbyId, playerID)
 
-		//tell timeout goroutine to stop
-		s.StopRepTimer[team+argSlot] <- struct{}{}
+		// tell timeout goroutine to stop (It is possible that the map
+		// entry will not exist if only 1 report is needed (such as debug
+		// lobbies))
+		if c, ok := s.StopRepTimer[team+argSlot]; ok {
+			c <- struct{}{}
+		}
 
 	case 1:
 		//first report happened, reset reps one minute later to 0, unless told to stop
