@@ -17,6 +17,8 @@ dependencies:
       - mkdir -p $GOPATH/src
       - mkdir -p $GOPATH/pkg
       - mkdir -p $GOPATH/bin
+      - git submodule init
+      - git submodule update
       #Vendoring
       #- wget https://github.com/Masterminds/glide/releases/download/0.8.3/glide-0.8.3-linux-amd64.tar.gz
       #- tar -xvf glide-*.tar.gz
