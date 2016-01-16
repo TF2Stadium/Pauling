@@ -126,7 +126,7 @@ func (s *Server) logListener() {
 				if err != nil {
 					helpers.Logger.Warning(err.Error())
 				}
-				MatchEnded(s.LobbyId)
+				MatchEnded(s.LobbyId, logID)
 				return
 
 			case TF2RconWrapper.PlayerGlobalMessage:
