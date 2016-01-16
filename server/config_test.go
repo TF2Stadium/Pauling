@@ -30,7 +30,7 @@ func TestConfigName(t *testing.T) {
 		{"koth_viaduct", models.LobbyTypeSixes, "ugc", "ugc/koth_sixes.cfg"},
 
 		{"ctf_ballin", models.LobbyTypeBball, "etf2l", "etf2l/ctf_bball.cfg"},
-		{"ultiduo_balloo", models.LobbyTypeUltiduo, "etf2l", ""},
+		{"ultiduo_balloo", models.LobbyTypeUltiduo, "etf2l", "etf2l/koth_ultiduo.cfg"},
 	}
 
 	for _, test := range cases {
