@@ -126,7 +126,7 @@ func (_ *Pauling) End(args *models.Args, nop *Noreply) error {
 
 	server.DeleteServer(s.LobbyId)
 	//now := time.Now().Unix()
-	s.ServerListener.Close(s.Rcon)
+	go s.ServerListener.Close(s.Rcon)
 	s.StopLogListener <- struct{}{}
 	//Logger.Debug("%d", time.Now().Unix()-now)
 
