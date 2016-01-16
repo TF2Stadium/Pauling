@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -13,6 +14,7 @@ import (
 	"github.com/TF2Stadium/Helen/models"
 	"github.com/TF2Stadium/Pauling/helen"
 	"github.com/TF2Stadium/Pauling/helpers"
+	"github.com/TF2Stadium/Pauling/logs"
 	"github.com/TF2Stadium/PlayerStatsScraper/steamid"
 	"github.com/TF2Stadium/TF2RconWrapper"
 )
@@ -30,9 +32,9 @@ type Server struct {
 	StopLogListener chan struct{}
 
 	ServerListener *TF2RconWrapper.ServerListener
-
-	Rcon *TF2RconWrapper.TF2RconConnection
-	Info models.ServerRecord
+	Rcon           *TF2RconWrapper.TF2RconConnection
+	Info           models.ServerRecord
+	logs           *bytes.Buffer
 }
 
 func NewServer() *Server {
@@ -40,6 +42,7 @@ func NewServer() *Server {
 		StopRepTimer:    make(map[string]chan struct{}),
 		StopVerifier:    make(chan struct{}),
 		StopLogListener: make(chan struct{}),
+		logs:            new(bytes.Buffer),
 	}
 
 	return s
@@ -103,20 +106,27 @@ func (s *Server) logListener() {
 		select {
 		case raw := <-s.ServerListener.RawMessages:
 			message, err := TF2RconWrapper.ParseMessage(raw)
+			rawMessage := message.Message[:len(message.Message)-2]
+
 			if helpers.PrintLogMessages {
-				helpers.Logger.Debug(message.Message)
+				helpers.Logger.Debug("L " + rawMessage)
 			}
 			//helpers.Logger.Debug(message.Message)
 
 			if err != nil {
 				continue
 			}
+			s.logs.WriteString("L " + rawMessage)
 
 			switch message.Parsed.Type {
 			case TF2RconWrapper.WorldGameOver:
 				s.ServerListener.Close(s.Rcon)
-				MatchEnded(s.LobbyId)
 				s.StopVerifier <- struct{}{}
+				logID, err := logs.Upload(fmt.Sprintf("TF2Stadium Lobby #%d", s.LobbyId), s.Map, s.logs)
+				if err != nil {
+					helpers.Logger.Warning(err.Error())
+				}
+				MatchEnded(s.LobbyId)
 				return
 
 			case TF2RconWrapper.PlayerGlobalMessage:
