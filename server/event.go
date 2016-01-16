@@ -42,10 +42,11 @@ func Substitute(lobbyID, playerID uint) {
 	send(e)
 }
 
-func MatchEnded(lobbyID uint) {
+func MatchEnded(lobbyID uint, logsID int) {
 	e := rpc.Event{
 		Name:    rpc.MatchEnded,
 		LobbyID: lobbyID,
+		LogsID:  logsID,
 	}
 	send(e)
 }
