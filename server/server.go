@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"io/ioutil"
+
 	"github.com/TF2Stadium/Helen/config"
 	"github.com/TF2Stadium/Helen/models"
 	"github.com/TF2Stadium/Pauling/helen"
@@ -124,7 +126,8 @@ func (s *Server) logListener() {
 				s.StopVerifier <- struct{}{}
 				logID, err := logs.Upload(fmt.Sprintf("TF2Stadium Lobby #%d", s.LobbyId), s.Map, s.logs)
 				if err != nil {
-					helpers.Logger.Warning(err.Error())
+					helpers.Logger.Warning("%d: %s", s.LobbyId, err.Error())
+					ioutil.WriteFile(fmt.Sprintf("%d.log", s.LobbyId), s.logs.Bytes(), 0666)
 				}
 				MatchEnded(s.LobbyId, logID)
 				return
