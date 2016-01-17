@@ -4,13 +4,12 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
-
-	"io/ioutil"
 
 	"github.com/TF2Stadium/Helen/config"
 	"github.com/TF2Stadium/Helen/models"
@@ -37,6 +36,8 @@ type Server struct {
 	Rcon           *TF2RconWrapper.TF2RconConnection
 	Info           models.ServerRecord
 	logs           *bytes.Buffer
+
+	matchEnded bool
 }
 
 func NewServer() *Server {
@@ -118,11 +119,18 @@ func (s *Server) logListener() {
 			if err != nil {
 				continue
 			}
-			s.logs.WriteString("L " + rawMessage)
+			s.logs.WriteString("L " + rawMessage + "\n")
 
 			switch message.Parsed.Type {
 			case TF2RconWrapper.WorldGameOver:
-				s.ServerListener.Close(s.Rcon)
+				s.matchEnded = true
+
+			case TF2RconWrapper.LogFileClosed:
+				if !s.matchEnded {
+					continue
+				}
+				//log has ended, try uploading
+				go s.ServerListener.Close(s.Rcon)
 				s.StopVerifier <- struct{}{}
 				logID, err := logs.Upload(fmt.Sprintf("TF2Stadium Lobby #%d", s.LobbyId), s.Map, s.logs)
 				if err != nil {
