@@ -165,3 +165,10 @@ func (Pauling) Test(struct{}, *struct{}) error {
 	helen.CheckConnection()
 	return nil
 }
+
+func Exists(lobbyID uint, reply *bool) error {
+	_, err := server.GetServer(lobbyID)
+	*reply = err != nil
+
+	return nil
+}
