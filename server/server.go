@@ -63,6 +63,7 @@ func NewServer() *Server {
 func (s *Server) StartVerifier(ticker *time.Ticker) {
 	var err error
 	var count int
+	defer DeleteServer(s.LobbyId)
 
 	_, err = s.Rcon.Query("status")
 	if err != nil {
@@ -87,7 +88,6 @@ func (s *Server) StartVerifier(ticker *time.Ticker) {
 			if !s.Verify() {
 				ticker.Stop()
 				s.Rcon.Close()
-				DeleteServer(s.LobbyId)
 				return
 			}
 		case <-s.StopVerifier:
@@ -95,7 +95,6 @@ func (s *Server) StartVerifier(ticker *time.Ticker) {
 			s.Rcon.Say("[tf2stadium.com] Lobby Ended.")
 			ticker.Stop()
 			s.Rcon.Close()
-			DeleteServer(s.LobbyId)
 			return
 		}
 	}
