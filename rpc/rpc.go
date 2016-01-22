@@ -166,7 +166,7 @@ func (Pauling) Test(struct{}, *struct{}) error {
 	return nil
 }
 
-func Exists(lobbyID uint, reply *bool) error {
+func (Pauling) Exists(lobbyID uint, reply *bool) error {
 	_, err := server.GetServer(lobbyID)
 	*reply = err == nil
 
