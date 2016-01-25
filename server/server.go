@@ -420,12 +420,26 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 		}
 	} else if argTeam == "blu" || argTeam == "red" {
 		team = argTeam
+	} else if argTeam == "blue" {
+		team = "blu"
 	} else if argTeam != "our" {
 		s.repUsage()
 		return
 	}
 
-	target := helen.GetSlotSteamID(team, argSlot, s.LobbyId, s.Type)
+	var slot string
+
+	if argSlot == "med" {
+		slot = "medic"
+	} else if argSlot == "solly" {
+		slot = "soldier"
+	} else if argSlot == "demo" {
+		slot = "demoman"
+	} else {
+		slot = argSlot
+	}
+
+	target := helen.GetSlotSteamID(team, slot, s.LobbyId, s.Type)
 	if target == "" {
 		s.Rcon.Say("!rep: Unknown or empty slot")
 		return
@@ -464,14 +478,14 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 		//Got needed number of reports, ask helen to substitute player
 		helpers.Logger.Debug("Reported")
 
-		s.Rcon.Sayf("Reporting %s %s: %s", team, argSlot, name)
+		s.Rcon.Sayf("Reporting %s %s: %s", team, slot, name)
 		playerID := helen.GetPlayerID(target)
 		Substitute(s.LobbyId, playerID)
 
 		// tell timeout goroutine to stop (It is possible that the map
 		// entry will not exist if only 1 report is needed (such as debug
 		// lobbies))
-		if c, ok := s.StopRepTimer[team+argSlot]; ok {
+		if c, ok := s.StopRepTimer[team + slot]; ok {
 			c <- struct{}{}
 		}
 
@@ -479,16 +493,16 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 		//first report happened, reset reps one minute later to 0, unless told to stop
 		ticker := time.NewTicker(1 * time.Minute)
 		stop := make(chan struct{})
-		s.StopRepTimer[team+argSlot] = stop
+		s.StopRepTimer[team + slot] = stop
 
 		go func() {
 			select {
 			case <-ticker.C:
-				s.Rcon.Sayf("Reporting %s %s failed, couldn't get enough !rep in 1 minute.", team, argSlot)
+				s.Rcon.Sayf("Reporting %s %s failed, couldn't get enough !rep in 1 minute.", team, slot)
 			case <-stop:
 				return
 			}
-			delete(s.StopRepTimer, team+argSlot)
+			delete(s.StopRepTimer, team + slot)
 		}()
 
 	default:
