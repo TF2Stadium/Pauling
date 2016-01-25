@@ -420,6 +420,8 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 		}
 	} else if argTeam == "blu" || argTeam == "red" {
 		team = argTeam
+	} else if argTeam == "blue" {
+		team = "blu"
 	} else if argTeam != "our" {
 		s.repUsage()
 		return
