@@ -40,6 +40,7 @@ type Server struct {
 }
 
 func SetupServers() {
+	helpers.Logger.Debug("Setting up servers")
 	records := helen.GetServers()
 	for id, record := range records {
 		server := NewServer()
