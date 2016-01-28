@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/TF2Stadium/Helen/config"
 	"github.com/TF2Stadium/Helen/models"
 	"github.com/TF2Stadium/Pauling/helen"
 	"github.com/TF2Stadium/Pauling/helpers"
@@ -38,6 +37,35 @@ type Server struct {
 	logs           *bytes.Buffer
 
 	matchEnded bool
+}
+
+func SetupServers() {
+	records := helen.GetServers()
+	for id, record := range records {
+		server := NewServer()
+		server.Info = *record
+		var count int
+		var err error
+
+		server.Rcon, err = TF2RconWrapper.NewTF2RconConnection(record.Host, record.RconPassword)
+		for err != nil {
+			time.Sleep(1 * time.Second)
+			helpers.Logger.Critical(err.Error())
+			count++
+			if count == 5 {
+				DisconnectedFromServer(id)
+				return
+			}
+			server.Rcon, err = TF2RconWrapper.NewTF2RconConnection(record.Host, record.RconPassword)
+		}
+
+		SetServer(id, server)
+
+		go server.StartVerifier(time.NewTicker(10 * time.Second))
+		server.ServerListener = helpers.RconListener.CreateServerListener(server.Rcon)
+		go server.logListener()
+
+	}
 }
 
 func NewServer() *Server {
@@ -204,10 +232,6 @@ func (s *Server) logListener() {
 }
 
 func (s *Server) Setup() error {
-	if config.Constants.ServerMockUp {
-		return nil
-	}
-
 	helpers.Logger.Debug("#%d: Connecting to %s", s.LobbyId, s.Info.Host)
 
 	var err error
