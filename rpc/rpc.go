@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"net/rpc"
+	"sync"
 	"syscall"
 	"time"
 
@@ -161,14 +162,19 @@ func (*Pauling) Say(args *models.Args, nop *Noreply) error {
 	return s.Rcon.Say(args.Text)
 }
 
-func (Pauling) Test(struct{}, *struct{}) error {
-	helen.CheckConnection()
-	return nil
-}
-
 func (Pauling) Exists(lobbyID uint, reply *bool) error {
 	_, err := server.GetServer(lobbyID)
 	*reply = err == nil
 
+	return nil
+}
+
+var once = new(sync.Once)
+
+func (Pauling) Ping(struct{}, *struct{}) error {
+	once.Do(func() {
+		helen.Connect(helpers.PortHelen)
+		server.SetupServers()
+	})
 	return nil
 }
