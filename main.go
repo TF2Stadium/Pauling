@@ -34,6 +34,7 @@ func main() {
 		defer pid.Remove()
 	}
 	server.CreateDB()
+	server.SetupServers()
 	rpc.StartRPC()
 	//PushEvent("getServers")
 }
