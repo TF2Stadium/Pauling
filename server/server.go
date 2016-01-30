@@ -434,6 +434,10 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 	argSlot := strings.ToLower(matches[2])
 
 	source, _ := steamid.SteamIdToCommId(data.SteamId)
+	if helen.IsReported(s.LobbyId, source) {
+		s.Rcon.Say("!rep: Player has already been reported.")
+		return
+	}
 	team = helen.GetTeam(s.LobbyId, s.Type, source)
 	//	helpers.Logger.Debug(team)
 	originTeam := team
