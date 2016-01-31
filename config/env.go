@@ -13,8 +13,8 @@ type constants struct {
 	PortRcon         string `envconfig:"RCON_PORT" default:"8002"`
 	PortRPC          string `envconfig:"RPC_PORT" default:"8001"`
 	PortHelen        string `envconfig:"HELEN_PORT" default:"8081"`
-	PortMQ           string `envconfig:"LOGSTF_KEY"`
-	LogsTFAPIKey     string `envconfig:"MQ_PORT"`
+	PortMQ           string `envconfig:"MQ_PORT"`
+	LogsTFAPIKey     string `envconfig:"LOGSTF_KEY"`
 }
 
 var Constants = constants{}
