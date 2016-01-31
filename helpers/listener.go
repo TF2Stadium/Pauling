@@ -25,10 +25,19 @@ func init() {
 	Logger.Debug("Getting IP Address")
 	ip := getlocalip()
 	var err error
-	RconListener, err = rcon.NewRconChatListener(ip, PortRcon)
-	if err != nil {
-		Logger.Fatal(err)
+	if PortMQ != "" {
+		RconListener, err = rcon.NewRconChatListener(ip, PortMQ)
+		if err != nil {
+			Logger.Fatal(err)
+		}
+
+		Logger.Info("Listening for server messages on %s:%s (through MQ)", ip, PortMQ)
+	} else {
+		RconListener, err = rcon.NewRconChatListener(ip, PortRcon)
+		if err != nil {
+			Logger.Fatal(err)
+		}
+		Logger.Info("Listening for server messages on %s:%s", ip, PortRcon)
 	}
 
-	Logger.Info("Listening for server messages on %s:%s", ip, PortRcon)
 }

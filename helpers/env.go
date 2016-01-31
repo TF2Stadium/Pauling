@@ -32,6 +32,7 @@ var (
 	PortRcon         string
 	PortRPC          string
 	PortHelen        string
+	PortMQ           string
 	LogsTFAPIKey     string
 )
 
@@ -44,4 +45,5 @@ func initConstants() {
 	PortRPC = override("8001", "PAULING_PORT").(string)
 	PortHelen = override("8081", "HELEN_PORT").(string)
 	LogsTFAPIKey = override("", "LOGSTF_KEY").(string)
+	PortMQ = override("", "MQ_PORT").(string)
 }
