@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/DSchalla/go-pid"
+	"github.com/TF2Stadium/Pauling/config"
 	"github.com/TF2Stadium/Pauling/helpers"
 	"github.com/TF2Stadium/Pauling/rpc"
 	"github.com/TF2Stadium/Pauling/server"
@@ -21,8 +22,11 @@ func getlocalip() string {
 }
 
 func main() {
-	if helpers.ProfilerEnable {
-		address := "localhost:" + helpers.PortProfiler
+	config.InitConstants()
+	helpers.InitLogger()
+
+	if config.Constants.ProfilerEnable {
+		address := "localhost:" + config.Constants.PortProfiler
 		go func() {
 			helpers.Logger.Error(http.ListenAndServe(address, nil).Error())
 		}()
@@ -33,6 +37,8 @@ func main() {
 	if pid.Create() == nil {
 		defer pid.Remove()
 	}
+
+	server.StartListener()
 	server.CreateDB()
 	rpc.StartRPC()
 	//PushEvent("getServers")

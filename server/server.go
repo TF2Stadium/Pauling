@@ -12,9 +12,10 @@ import (
 	"time"
 
 	"github.com/TF2Stadium/Helen/models"
+	"github.com/TF2Stadium/Pauling/config"
 	"github.com/TF2Stadium/Pauling/helen"
 	"github.com/TF2Stadium/Pauling/helpers"
-	"github.com/TF2Stadium/Pauling/logs"
+	"github.com/TF2Stadium/Pauling/server/logs"
 	"github.com/TF2Stadium/PlayerStatsScraper/steamid"
 	"github.com/TF2Stadium/TF2RconWrapper"
 )
@@ -63,7 +64,7 @@ func SetupServers() {
 		SetServer(id, server)
 
 		go server.StartVerifier(time.NewTicker(10 * time.Second))
-		server.ServerListener = helpers.RconListener.CreateServerListener(server.Rcon)
+		server.ServerListener = RconListener.CreateServerListener(server.Rcon)
 		go server.logListener()
 
 	}
@@ -139,7 +140,7 @@ func (s *Server) logListener() {
 			message, err := TF2RconWrapper.ParseMessage(raw)
 			rawMessage := message.Message[:len(message.Message)-2]
 
-			if helpers.PrintLogMessages {
+			if config.Constants.PrintLogMessages {
 				helpers.Logger.Debug("L " + rawMessage)
 			}
 			//helpers.Logger.Debug(message.Message)
@@ -298,7 +299,7 @@ func (s *Server) Setup() error {
 	f.Close()
 
 	helpers.Logger.Debug("#%d: Creating listener", s.LobbyId)
-	s.ServerListener = helpers.RconListener.CreateServerListener(s.Rcon)
+	s.ServerListener = RconListener.CreateServerListener(s.Rcon)
 	go s.logListener()
 
 	// change map,

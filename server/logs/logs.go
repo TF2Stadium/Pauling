@@ -7,7 +7,7 @@ import (
 	"mime/multipart"
 	"net/http"
 
-	"github.com/TF2Stadium/Pauling/helpers"
+	"github.com/TF2Stadium/Pauling/config"
 )
 
 // success	True / False
@@ -39,7 +39,7 @@ func Upload(title, mapName string, logs *bytes.Buffer) (int, error) {
 	//uploader-Optional Name of the uploading plugin or software (including version). Max length 40 chars.
 	writer.WriteField("uploader", "TF2Stadium")
 	//key-Your unique key, see "Logs.tf API key" on upload page.
-	writer.WriteField("key", helpers.LogsTFAPIKey)
+	writer.WriteField("key", config.Constants.LogsTFAPIKey)
 	writer.Close()
 
 	req, err := http.NewRequest("POST", "http://logs.tf/upload", body)
