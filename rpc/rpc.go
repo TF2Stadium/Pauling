@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/TF2Stadium/Helen/models"
+	"github.com/TF2Stadium/Pauling/config"
 	"github.com/TF2Stadium/Pauling/helen"
 	"github.com/TF2Stadium/Pauling/helpers"
 	"github.com/TF2Stadium/Pauling/server"
@@ -27,11 +28,11 @@ func StartRPC() {
 	rpc.Register(pauling)
 	rpc.HandleHTTP()
 
-	l, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%s", helpers.PortRPC))
+	l, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%s", config.Constants.PortRPC))
 	if err != nil {
 		helpers.Logger.Fatal(err)
 	}
-	helpers.Logger.Info("Listening on %s", helpers.PortRPC)
+	helpers.Logger.Info("Listening on %s", config.Constants.PortRPC)
 	helpers.Logger.Fatal(http.Serve(l, nil))
 }
 
@@ -41,7 +42,7 @@ func (_ *Pauling) VerifyInfo(info *models.ServerRecord, nop *Noreply) error {
 		defer c.Close()
 
 		c.Query("log on; sv_rcon_log 1; sv_logflush 1")
-		listener := helpers.RconListener.CreateServerListener(c)
+		listener := server.RconListener.CreateServerListener(c)
 
 		tick := time.After(time.Second * 5)
 		err := make(chan error)
@@ -173,7 +174,7 @@ var once = new(sync.Once)
 
 func (Pauling) Ping(struct{}, *struct{}) error {
 	once.Do(func() {
-		helen.Connect(helpers.PortHelen)
+		helen.Connect(config.Constants.PortHelen)
 		server.SetupServers()
 	})
 	return nil

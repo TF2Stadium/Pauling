@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/TF2Stadium/Pauling/config"
 	"github.com/TF2Stadium/Pauling/helpers"
 )
 
@@ -40,7 +41,7 @@ func Call(method string, args interface{}, reply interface{}) error {
 	mu.RUnlock()
 
 	if isNetworkError(err) {
-		Connect(helpers.PortHelen)
+		Connect(config.Constants.PortHelen)
 		//retry call again
 		return Call(method, args, reply)
 	}
