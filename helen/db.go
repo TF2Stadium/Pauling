@@ -54,3 +54,12 @@ func IsReported(lobbyID uint, steamID string) (repped bool) {
 	}
 	return
 }
+
+func SetSecret(lobbyID uint, secret string) {
+	err := Call("Helen.SetSecret", helen.Args{LobbyID: lobbyID, LogSecret: secret}, &struct{}{})
+	if err != nil {
+		helpers.Logger.Error(err.Error())
+	}
+
+	return
+}
