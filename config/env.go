@@ -12,9 +12,10 @@ type constants struct {
 	PrintLogMessages bool   `envconfig:"PRINT_LOG_MESSAGES" default:"false"`
 	PortRcon         string `envconfig:"RCON_PORT" default:"8002"`
 	PortRPC          string `envconfig:"RPC_PORT" default:"8001"`
-	PortHelen        string `envconfig:"HELEN_PORT" default:"8081"`
 	PortMQ           string `envconfig:"MQ_PORT"`
 	LogsTFAPIKey     string `envconfig:"LOGSTF_KEY"`
+
+	HelenAddr string `envconfig:"HELEN_ADDR" default:"locahost:8081"`
 }
 
 var Constants = constants{}

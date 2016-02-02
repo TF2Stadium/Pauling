@@ -16,16 +16,16 @@ var (
 	mu     = new(sync.RWMutex)
 )
 
-func Connect(port string) {
+func Connect(addr string) {
 	var err error
 	mu.Lock()
 	defer mu.Unlock()
 
-	client, err = rpc.DialHTTP("tcp", "localhost:"+port)
+	client, err = rpc.DialHTTP("tcp", addr)
 	for err != nil {
 		helpers.Logger.Error(err.Error())
 		time.Sleep(1 * time.Second)
-		client, err = rpc.DialHTTP("tcp", "localhost:"+port)
+		client, err = rpc.DialHTTP("tcp", addr)
 	}
 }
 
@@ -41,7 +41,7 @@ func Call(method string, args interface{}, reply interface{}) error {
 	mu.RUnlock()
 
 	if isNetworkError(err) {
-		Connect(config.Constants.PortHelen)
+		Connect(config.Constants.HelenAddr)
 		//retry call again
 		return Call(method, args, reply)
 	}
