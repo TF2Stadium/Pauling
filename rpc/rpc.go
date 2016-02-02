@@ -174,7 +174,7 @@ var once = new(sync.Once)
 
 func (Pauling) Ping(struct{}, *struct{}) error {
 	once.Do(func() {
-		helen.Connect(config.Constants.PortHelen)
+		helen.Connect(config.Constants.HelenAddr)
 		server.SetupServers()
 	})
 	return nil
