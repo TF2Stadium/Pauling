@@ -300,6 +300,7 @@ func (s *Server) Setup() error {
 
 	helpers.Logger.Debug("#%d: Creating listener", s.LobbyId)
 	s.ServerListener = RconListener.CreateServerListener(s.Rcon)
+	helen.SetSecret(s.LobbyId, s.ServerListener.Secret)
 	go s.logListener()
 
 	// change map,
