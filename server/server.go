@@ -64,7 +64,7 @@ func SetupServers() {
 		SetServer(id, server)
 
 		go server.StartVerifier(time.NewTicker(10 * time.Second))
-		server.ServerListener = RconListener.CreateServerListener(server.Rcon)
+		server.ServerListener = RconListener.CreateListenerWithSecret(server.Rcon, record.LogSecret)
 		go server.logListener()
 
 	}
