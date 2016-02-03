@@ -123,6 +123,7 @@ func (s *Server) StartVerifier(ticker *time.Ticker) {
 		case <-s.StopVerifier:
 			helpers.Logger.Debug("Stopping logger for lobby %d", s.LobbyId)
 			s.Rcon.Say("[tf2stadium.com] Lobby Ended.")
+			s.Rcon.RemoveTag("TF2Stadium")
 			ticker.Stop()
 			s.Rcon.Close()
 			return
@@ -336,6 +337,8 @@ func (s *Server) Setup() error {
 		}
 		s.Rcon.Query("tftrue_no_hats 0")
 	}
+
+	s.Rcon.AddTag("TF2Stadium")
 
 	helpers.Logger.Debug("#%d: Configured", s.LobbyId)
 	return nil
