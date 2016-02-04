@@ -40,6 +40,10 @@ func ConfigName(mapName string, lobbyType models.LobbyType, ruleset string) (str
 	return file, nil
 }
 
+func FormatConfigName(lobbyType models.LobbyType) string {
+	return fmt.Sprintf("formats/%s.cfg", formatMap[lobbyType])
+}
+
 //Execute file located at path on rcon
 //TODO: Shouldn't this be in TF2RconWrapper?
 func ExecFile(path string, rcon *tf2rcon.TF2RconConnection) error {

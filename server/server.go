@@ -347,10 +347,12 @@ func (s *Server) Setup() error {
 func (s *Server) ExecConfig() error {
 	var err error
 
-	filePath, err := ConfigName(s.Map, s.Type, s.League)
+	configPath, err := ConfigName(s.Map, s.Type, s.League)
 	if err != nil {
 		return err
 	}
+
+	formatConfigPath := FormatConfigName(s.Type)
 
 	if s.Type != models.LobbyTypeDebug {
 		err = ExecFile("base.cfg", s.Rcon)
@@ -359,7 +361,12 @@ func (s *Server) ExecConfig() error {
 		}
 	}
 
-	err = ExecFile(filePath, s.Rcon)
+	err = ExecFile(formatConfigPath, s.Rcon)
+	if err != nil {
+		return err
+	}
+
+	err = ExecFile(configPath, s.Rcon)
 
 	if s.Type != models.LobbyTypeDebug {
 		err = ExecFile("after_format.cfg", s.Rcon)
