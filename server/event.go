@@ -5,8 +5,6 @@ import (
 	"github.com/TF2Stadium/Pauling/helen"
 )
 
-func send(e rpc.Event) { helen.Call("Event.Handle", e, struct{}{}) }
-
 func PlayerDisconnected(lobbyID, playerID uint) {
 	e := rpc.Event{
 		Name:     rpc.PlayerDisconnected,
@@ -14,7 +12,7 @@ func PlayerDisconnected(lobbyID, playerID uint) {
 		PlayerID: playerID,
 	}
 
-	send(e)
+	helen.SendEvent(e)
 }
 
 func PlayerConnected(lobbyID, playerID uint) {
@@ -22,7 +20,7 @@ func PlayerConnected(lobbyID, playerID uint) {
 		Name:     rpc.PlayerConnected,
 		LobbyID:  lobbyID,
 		PlayerID: playerID}
-	send(e)
+	helen.SendEvent(e)
 }
 
 func DisconnectedFromServer(lobbyID uint) {
@@ -30,7 +28,7 @@ func DisconnectedFromServer(lobbyID uint) {
 		Name:    rpc.DisconnectedFromServer,
 		LobbyID: lobbyID,
 	}
-	send(e)
+	helen.SendEvent(e)
 }
 
 func Substitute(lobbyID, playerID uint) {
@@ -39,7 +37,7 @@ func Substitute(lobbyID, playerID uint) {
 		LobbyID:  lobbyID,
 		PlayerID: playerID,
 	}
-	send(e)
+	helen.SendEvent(e)
 }
 
 func MatchEnded(lobbyID uint, logsID int) {
@@ -48,5 +46,5 @@ func MatchEnded(lobbyID uint, logsID int) {
 		LobbyID: lobbyID,
 		LogsID:  logsID,
 	}
-	send(e)
+	helen.SendEvent(e)
 }
