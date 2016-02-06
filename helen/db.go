@@ -8,13 +8,13 @@ import (
 
 // GetPlayerID returns a player ID (primary key), given their Steam Community id
 func GetPlayerID(steamid string) (id uint) {
-	Call("Helen.GetPlayerID", steamid, &id)
+	helenClient.Call("Helen.GetPlayerID", steamid, &id)
 	return
 }
 
 // GetTeam returns the player's team, given the player's steamid and the lobby id
 func GetTeam(lobbyID uint, lobbyType models.LobbyType, steamID string) (team string) {
-	Call("Helen.GetTeam", helen.Args{LobbyID: lobbyID, Type: lobbyType, SteamID: steamID}, &team)
+	helenClient.Call("Helen.GetTeam", helen.Args{LobbyID: lobbyID, Type: lobbyType, SteamID: steamID}, &team)
 	return
 }
 
@@ -28,19 +28,19 @@ func GetSlotSteamID(team, class string, lobbyID uint, lobbyType models.LobbyType
 		Class: class,
 	}
 
-	Call("Helen.GetSteamIDFromSlot", args, &steamID)
+	helenClient.Call("Helen.GetSteamIDFromSlot", args, &steamID)
 
 	return
 }
 
 // GetName returns the name for a plyer given their steam ID
 func GetName(steamID string) (name string) {
-	Call("Helen.GetNameFromSteamID", steamID, &name)
+	helenClient.Call("Helen.GetNameFromSteamID", steamID, &name)
 	return
 }
 
 func IsAllowed(lobbyID uint, steamID string) (allowed bool) {
-	err := Call("Helen.IsAllowed", helen.Args{LobbyID: lobbyID, SteamID: steamID}, &allowed)
+	err := helenClient.Call("Helen.IsAllowed", helen.Args{LobbyID: lobbyID, SteamID: steamID}, &allowed)
 	if err != nil {
 		helpers.Logger.Error(err.Error())
 	}
@@ -48,7 +48,7 @@ func IsAllowed(lobbyID uint, steamID string) (allowed bool) {
 }
 
 func IsReported(lobbyID uint, steamID string) (repped bool) {
-	err := Call("Helen.IsReported", helen.Args{LobbyID: lobbyID, SteamID: steamID}, &repped)
+	err := helenClient.Call("Helen.IsReported", helen.Args{LobbyID: lobbyID, SteamID: steamID}, &repped)
 	if err != nil {
 		helpers.Logger.Error(err.Error())
 	}
@@ -56,7 +56,7 @@ func IsReported(lobbyID uint, steamID string) (repped bool) {
 }
 
 func SetSecret(lobbyID uint, secret string) {
-	err := Call("Helen.SetSecret", helen.Args{LobbyID: lobbyID, LogSecret: secret}, &struct{}{})
+	err := helenClient.Call("Helen.SetSecret", helen.Args{LobbyID: lobbyID, LogSecret: secret}, &struct{}{})
 	if err != nil {
 		helpers.Logger.Error(err.Error())
 	}
