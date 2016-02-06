@@ -15,7 +15,7 @@ type constants struct {
 	PortMQ           string `envconfig:"MQ_PORT"`
 	LogsTFAPIKey     string `envconfig:"LOGSTF_KEY"`
 
-	HelenAddr string `envconfig:"HELEN_ADDR" default:"locahost:8081"`
+	HelenAddr string `envconfig:"HELEN_ADDR" default:"localhost:8081"`
 }
 
 var Constants = constants{}
