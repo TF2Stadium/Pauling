@@ -31,13 +31,13 @@ func main() {
 	config.InitConstants()
 	helpers.InitLogger()
 	u, err := url.Parse(config.Constants.AddrMQCtl)
-	if err != nil {
+	if err != nil && config.Constants.AddrMQCtl != "" {
 		helpers.Logger.Fatal(err)
 	}
 
 	u.Path = "start"
 	_, err = http.Post(u.String(), "", nil)
-	if err != nil {
+	if err != nil && config.Constants.AddrMQCtl != "" {
 		helpers.Logger.Fatal(err)
 	}
 
@@ -72,7 +72,7 @@ func main() {
 			l.Close()
 			u.Path = "stop"
 			http.Post(u.String(), "", nil)
-			os.Exit(0)
 		}
+		os.Exit(0)
 	}
 }
