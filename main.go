@@ -36,7 +36,7 @@ func main() {
 	}
 
 	u.Path = "start"
-	_, err := http.Post(u.String(), "", nil)
+	_, err = http.Post(u.String(), "", nil)
 	if err != nil {
 		helpers.Logger.Fatal(err)
 	}
