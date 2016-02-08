@@ -13,6 +13,7 @@ type constants struct {
 	PortRcon         string `envconfig:"RCON_PORT" default:"8002"`
 	PortRPC          string `envconfig:"RPC_PORT" default:"8001"`
 	PortMQ           string `envconfig:"MQ_PORT"`
+	AddrMQCtl        string `env:"MQ_CTL_ADDR"` // must include schema
 	LogsTFAPIKey     string `envconfig:"LOGSTF_KEY"`
 
 	HelenAddr string `envconfig:"HELEN_ADDR" default:"localhost:8081"`
