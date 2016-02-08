@@ -2,7 +2,6 @@ package rpc
 
 import (
 	"errors"
-	"fmt"
 	"net"
 	"net/http"
 	"net/rpc"
@@ -23,15 +22,11 @@ import (
 type Pauling struct{}
 type Noreply struct{}
 
-func StartRPC() {
+func StartRPC(l net.Listener) {
 	pauling := new(Pauling)
 	rpc.Register(pauling)
 	rpc.HandleHTTP()
 
-	l, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%s", config.Constants.PortRPC))
-	if err != nil {
-		helpers.Logger.Fatal(err)
-	}
 	helpers.Logger.Info("Listening on %s", config.Constants.PortRPC)
 	helpers.Logger.Fatal(http.Serve(l, nil))
 }
