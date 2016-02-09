@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -11,6 +10,7 @@ import (
 	"syscall"
 
 	"github.com/DSchalla/go-pid"
+	helenHelpers "github.com/TF2Stadium/Helen/helpers"
 	"github.com/TF2Stadium/Pauling/config"
 	"github.com/TF2Stadium/Pauling/helpers"
 	"github.com/TF2Stadium/Pauling/rpc"
@@ -30,6 +30,21 @@ func getlocalip() string {
 func main() {
 	config.InitConstants()
 	helpers.InitLogger()
+
+	if config.Constants.EtcdAddr != "" {
+		err := helenHelpers.ConnectEtcd(config.Constants.EtcdAddr)
+		if err != nil {
+			helpers.Logger.Fatal(err)
+		}
+
+		node, err := helenHelpers.SetAddr(config.Constants.EtcdService, config.Constants.AddrRPC)
+		if err != nil {
+			helpers.Logger.Fatal(err)
+		}
+
+		helpers.Logger.Info("Written key %s=%s", node.Key, node.Value)
+	}
+
 	u, err := url.Parse(config.Constants.AddrMQCtl)
 	if err != nil && config.Constants.AddrMQCtl != "" {
 		helpers.Logger.Fatal(err)
@@ -57,7 +72,7 @@ func main() {
 	server.StartListener()
 	server.CreateDB()
 
-	l, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%s", config.Constants.PortRPC))
+	l, err := net.Listen("tcp", config.Constants.AddrRPC)
 	if err != nil {
 		helpers.Logger.Fatal(err)
 	}
