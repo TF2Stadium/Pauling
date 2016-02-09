@@ -27,7 +27,7 @@ func StartRPC(l net.Listener) {
 	rpc.Register(pauling)
 	rpc.HandleHTTP()
 
-	helpers.Logger.Info("Listening on %s", config.Constants.PortRPC)
+	helpers.Logger.Info("Listening on %s", config.Constants.AddrRPC)
 	helpers.Logger.Fatal(http.Serve(l, nil))
 }
 
