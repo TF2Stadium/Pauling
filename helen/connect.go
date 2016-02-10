@@ -3,8 +3,8 @@ package helen
 import (
 	"sync"
 
-	helenHelpers "github.com/TF2Stadium/Helen/helpers"
 	"github.com/TF2Stadium/Pauling/helpers"
+	"github.com/TF2Stadium/etcd"
 	"github.com/vibhavp/rpcconn"
 )
 
@@ -19,7 +19,7 @@ func Connect(addr string) {
 	defer mu.Unlock()
 
 	helpers.Logger.Info("Connecting to Helen on %s", addr)
-	helenClient, err = rpcconn.DialHTTP("tcp", helenHelpers.Address{addr})
+	helenClient, err = rpcconn.DialHTTP("tcp", etcd.Address{Address: addr})
 	for err != nil {
 		helpers.Logger.Fatal(err)
 	}
