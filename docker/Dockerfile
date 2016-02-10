@@ -1,5 +1,5 @@
-FROM scratch
+FROM alpine
 
 ADD pauling /pauling
 
-CMD ["/pauling"]
+ENTRYPOINT /pauling
