@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/http"
 	"net/rpc"
+	"net/url"
 	"sync"
 	"syscall"
 	"time"
@@ -171,6 +172,20 @@ func (Pauling) Ping(struct{}, *struct{}) error {
 	once.Do(func() {
 		helen.Connect(config.Constants.HelenAddr)
 		server.SetupServers()
+
+		if config.Constants.AddrMQCtl != "" {
+			u, err := url.Parse(config.Constants.AddrMQCtl)
+			if err != nil && config.Constants.AddrMQCtl != "" {
+				helpers.Logger.Fatal(err)
+			}
+
+			u.Path = "start"
+			_, err = http.Post(u.String(), "", nil)
+			if err != nil && config.Constants.AddrMQCtl != "" {
+				helpers.Logger.Fatal(err)
+			}
+		}
+
 	})
 	return nil
 }
