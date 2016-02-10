@@ -10,11 +10,11 @@ import (
 	"syscall"
 
 	"github.com/DSchalla/go-pid"
-	helenHelpers "github.com/TF2Stadium/Helen/helpers"
 	"github.com/TF2Stadium/Pauling/config"
 	"github.com/TF2Stadium/Pauling/helpers"
 	"github.com/TF2Stadium/Pauling/rpc"
 	"github.com/TF2Stadium/Pauling/server"
+	"github.com/TF2Stadium/etcd"
 	_ "github.com/rakyll/gom/http"
 )
 
@@ -31,29 +31,29 @@ func main() {
 	config.InitConstants()
 	helpers.InitLogger()
 
+	var u *url.URL
+
+	if config.Constants.AddrMQCtl != "" {
+		var err error
+
+		u, err = url.Parse(config.Constants.AddrMQCtl)
+		if err != nil {
+			helpers.Logger.Fatal(err)
+		}
+	}
+
 	if config.Constants.EtcdAddr != "" {
-		err := helenHelpers.ConnectEtcd(config.Constants.EtcdAddr)
+		err := etcd.ConnectEtcd(config.Constants.EtcdAddr)
 		if err != nil {
 			helpers.Logger.Fatal(err)
 		}
 
-		node, err := helenHelpers.SetAddr(config.Constants.EtcdService, config.Constants.AddrRPC)
+		node, err := etcd.SetAddr(config.Constants.EtcdService, config.Constants.AddrRPC)
 		if err != nil {
 			helpers.Logger.Fatal(err)
 		}
 
 		helpers.Logger.Info("Written key %s=%s", node.Key, node.Value)
-	}
-
-	u, err := url.Parse(config.Constants.AddrMQCtl)
-	if err != nil && config.Constants.AddrMQCtl != "" {
-		helpers.Logger.Fatal(err)
-	}
-
-	u.Path = "start"
-	_, err = http.Post(u.String(), "", nil)
-	if err != nil && config.Constants.AddrMQCtl != "" {
-		helpers.Logger.Fatal(err)
 	}
 
 	if config.Constants.ProfilerEnable {
