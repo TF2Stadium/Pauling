@@ -20,6 +20,8 @@ type constants struct {
 
 	EtcdAddr    string `envconfig:"ETCD_ADDR"`
 	EtcdService string `envconfig:"ETCD_SERVICE"`
+
+	Docker bool `envconfig:"DOCKER"`
 }
 
 var Constants = constants{}
