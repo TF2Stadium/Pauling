@@ -5,7 +5,6 @@ import (
 	"net"
 	"net/http"
 	"net/rpc"
-	"net/url"
 	"sync"
 	"syscall"
 	"time"
@@ -28,7 +27,7 @@ func StartRPC(l net.Listener) {
 	rpc.Register(pauling)
 	rpc.HandleHTTP()
 
-	helpers.Logger.Info("Listening on %s", config.Constants.AddrRPC)
+	helpers.Logger.Info("Listening on %s", config.Constants.RPCAddr)
 	helpers.Logger.Fatal(http.Serve(l, nil))
 }
 
@@ -173,18 +172,18 @@ func (Pauling) Ping(struct{}, *struct{}) error {
 		helen.Connect(config.Constants.HelenAddr)
 		server.SetupServers()
 
-		if config.Constants.AddrMQCtl != "" {
-			u, err := url.Parse(config.Constants.AddrMQCtl)
-			if err != nil && config.Constants.AddrMQCtl != "" {
-				helpers.Logger.Fatal(err)
-			}
+		// if config.Constants.AddrMQCtl != "" {
+		// 	u, err := url.Parse(config.Constants.AddrMQCtl)
+		// 	if err != nil && config.Constants.AddrMQCtl != "" {
+		// 		helpers.Logger.Fatal(err)
+		// 	}
 
-			u.Path = "start"
-			_, err = http.Post(u.String(), "", nil)
-			if err != nil && config.Constants.AddrMQCtl != "" {
-				helpers.Logger.Fatal(err)
-			}
-		}
+		// 	u.Path = "start"
+		// 	_, err = http.Post(u.String(), "", nil)
+		// 	if err != nil && config.Constants.AddrMQCtl != "" {
+		// 		helpers.Logger.Fatal(err)
+		// 	}
+		// }
 
 	})
 	return nil
