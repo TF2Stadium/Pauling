@@ -4,7 +4,6 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
-	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
@@ -31,16 +30,16 @@ func main() {
 	config.InitConstants()
 	helpers.InitLogger()
 
-	var u *url.URL
+	// var u *url.URL
 
-	if config.Constants.AddrMQCtl != "" {
-		var err error
+	// if config.Constants.AddrMQCtl != "" {
+	// 	var err error
 
-		u, err = url.Parse(config.Constants.AddrMQCtl)
-		if err != nil {
-			helpers.Logger.Fatal(err)
-		}
-	}
+	// 	u, err = url.Parse(config.Constants.AddrMQCtl)
+	// 	if err != nil {
+	// 		helpers.Logger.Fatal(err)
+	// 	}
+	// }
 
 	if config.Constants.EtcdAddr != "" {
 		err := etcd.ConnectEtcd(config.Constants.EtcdAddr)
@@ -48,7 +47,7 @@ func main() {
 			helpers.Logger.Fatal(err)
 		}
 
-		node, err := etcd.SetAddr(config.Constants.EtcdService, config.Constants.AddrRPC)
+		node, err := etcd.SetAddr(config.Constants.EtcdService, config.Constants.RPCAddr)
 		if err != nil {
 			helpers.Logger.Fatal(err)
 		}
@@ -72,7 +71,7 @@ func main() {
 	server.StartListener()
 	server.CreateDB()
 
-	l, err := net.Listen("tcp", config.Constants.AddrRPC)
+	l, err := net.Listen("tcp", config.Constants.RPCAddr)
 	if err != nil {
 		helpers.Logger.Fatal(err)
 	}
@@ -82,12 +81,13 @@ func main() {
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 	for {
 		<-sig
-		if config.Constants.AddrMQCtl != "" {
-			helpers.Logger.Info("Received SIGINT/SIGTERM, queuing messages.")
-			l.Close()
-			u.Path = "stop"
-			http.Post(u.String(), "", nil)
-		}
+		// if config.Constants.AddrMQCtl != "" {
+		// 	helpers.Logger.Info("Received SIGINT/SIGTERM, queuing messages.")
+		// 	l.Close()
+		// 	u.Path = "stop"
+		// 	http.Post(u.String(), "", nil)
+		// }
+		l.Close()
 		os.Exit(0)
 	}
 }
