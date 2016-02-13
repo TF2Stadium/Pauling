@@ -137,6 +137,10 @@ func (s *Server) logListener() {
 	//is what Helen uses (and is sent in RPC calls)
 	for {
 		select {
+		case <-s.StopLogListener:
+			s.StopVerifier <- struct{}{}
+			return
+
 		case raw := <-s.ServerListener.RawMessages:
 			message, err := TF2RconWrapper.ParseMessage(raw)
 			rawMessage := message.Message[:len(message.Message)-2]
@@ -226,10 +230,6 @@ func (s *Server) logListener() {
 				}
 			}
 
-		case <-s.StopLogListener:
-			s.StopVerifier <- struct{}{}
-			return
-
 		}
 	}
 }
@@ -314,15 +314,13 @@ func (s *Server) Setup() error {
 
 	helpers.Logger.Debug("#%d: Executing config.", s.LobbyId)
 	err = s.ExecConfig()
-	if err != nil {
-		helpers.Logger.Error(err.Error())
+	if err != nil { // retry connection
 		var count int
 
 		s.Rcon.Close()
 		s.Rcon, err = TF2RconWrapper.NewTF2RconConnection(s.Info.Host, s.Info.RconPassword)
 		for err != nil && count != 5 {
 			time.Sleep(1 * time.Second)
-			helpers.Logger.Critical(err.Error())
 			count++
 			s.Rcon, err = TF2RconWrapper.NewTF2RconConnection(s.Info.Host, s.Info.RconPassword)
 		}
@@ -335,9 +333,9 @@ func (s *Server) Setup() error {
 			helpers.Logger.Error("#%d: %s", s.LobbyId, err.Error())
 			return err
 		}
-		s.Rcon.Query("tftrue_no_hats 0")
 	}
 
+	s.Rcon.Query("tftrue_no_hats 0")
 	s.Rcon.AddTag("TF2Stadium")
 
 	helpers.Logger.Debug("#%d: Configured", s.LobbyId)
