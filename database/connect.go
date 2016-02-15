@@ -19,7 +19,7 @@ func Connect() {
 		RawQuery: "sslmode=disable",
 	}
 
-	helpers.Logger.Debug("Connecting to DB on ", DBUrl.String())
+	helpers.Logger.Debug("Connecting to DB on %s", DBUrl.String())
 
 	DBUrl.User = url.UserPassword(config.Constants.DBUsername, config.Constants.DBPassword)
 	var err error
