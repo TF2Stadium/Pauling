@@ -1,50 +1,58 @@
 package server
 
 import (
-	"github.com/TF2Stadium/Helen/rpc"
-	"github.com/TF2Stadium/Pauling/helen"
+	"encoding/json"
+
+	"github.com/TF2Stadium/Helen/models/event"
+	"github.com/TF2Stadium/Pauling/config"
+	"github.com/TF2Stadium/Pauling/helpers"
+	"github.com/streadway/amqp"
 )
 
-func PlayerDisconnected(lobbyID, playerID uint) {
-	e := rpc.Event{
-		Name:     rpc.PlayerDisconnected,
-		LobbyID:  lobbyID,
-		PlayerID: playerID,
+var (
+	conn    *amqp.Connection
+	queue   amqp.Queue
+	channel *amqp.Channel
+)
+
+func connectMQ() {
+	var err error
+
+	conn, err = amqp.Dial(config.Constants.RabbitMQURL)
+	if err != nil {
+		helpers.Logger.Fatalf("Failed to connect to RabbitMQ - %s", err.Error())
 	}
 
-	helen.SendEvent(e)
-}
-
-func PlayerConnected(lobbyID, playerID uint) {
-	e := rpc.Event{
-		Name:     rpc.PlayerConnected,
-		LobbyID:  lobbyID,
-		PlayerID: playerID}
-	helen.SendEvent(e)
-}
-
-func DisconnectedFromServer(lobbyID uint) {
-	e := rpc.Event{
-		Name:    rpc.DisconnectedFromServer,
-		LobbyID: lobbyID,
+	channel, err = conn.Channel()
+	if err != nil {
+		helpers.Logger.Fatalf("Failed to open a channel - %s", err.Error())
 	}
-	helen.SendEvent(e)
+
+	queue, err = channel.QueueDeclare(
+		config.Constants.RabbitMQQueue, // name
+		false, // durable
+		false, // delete when unused
+		false, // exclusive
+		false, // no-wait
+		nil,   // arguments
+	)
+
+	if err != nil {
+		helpers.Logger.Fatalf("Failed to declare a queue - %s", err.Error())
+	}
+
+	helpers.Logger.Info("Sending events on queue %s on %s", config.Constants.RabbitMQQueue, config.Constants.RabbitMQURL)
 }
 
-func Substitute(lobbyID, playerID uint) {
-	e := rpc.Event{
-		Name:     rpc.PlayerSubstituted,
-		LobbyID:  lobbyID,
-		PlayerID: playerID,
-	}
-	helen.SendEvent(e)
-}
-
-func MatchEnded(lobbyID uint, logsID int) {
-	e := rpc.Event{
-		Name:    rpc.MatchEnded,
-		LobbyID: lobbyID,
-		LogsID:  logsID,
-	}
-	helen.SendEvent(e)
+func publishEvent(e event.Event) {
+	bytes, _ := json.Marshal(e)
+	channel.Publish(
+		"",
+		queue.Name,
+		false,
+		false,
+		amqp.Publishing{
+			ContentType: "application/json",
+			Body:        bytes,
+		})
 }
