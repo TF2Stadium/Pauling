@@ -9,7 +9,7 @@ import (
 	rcon "github.com/TF2Stadium/TF2RconWrapper"
 )
 
-var RconListener *rcon.RconChatListener
+var listener *rcon.Listener
 
 func getlocalip() string {
 	resp, err := http.Get("http://api.ipify.org")
@@ -24,16 +24,13 @@ func StartListener() {
 	var err error
 	ip := getlocalip()
 
-	if config.Constants.Docker {
-		RconListener, err = rcon.NewRconChatListener("0.0.0.0", config.Constants.LogsPort)
-		RconListener.SetRedirectAddress(ip, config.Constants.LogsPort)
-	} else {
-		RconListener, err = rcon.NewRconChatListener(ip, config.Constants.LogsPort)
-	}
+	listener, err = rcon.NewListenerAddr(config.Constants.LogsPort, ip+":"+config.Constants.LogsPort)
 
 	if err != nil {
 		helpers.Logger.Fatal(err)
 	}
 
 	helpers.Logger.Info("Listening for server messages on %s:%s", ip, config.Constants.LogsPort)
+
+	connectMQ()
 }
