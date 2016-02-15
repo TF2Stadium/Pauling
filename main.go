@@ -10,6 +10,7 @@ import (
 
 	"github.com/DSchalla/go-pid"
 	"github.com/TF2Stadium/Pauling/config"
+	"github.com/TF2Stadium/Pauling/database"
 	"github.com/TF2Stadium/Pauling/helpers"
 	"github.com/TF2Stadium/Pauling/rpc"
 	"github.com/TF2Stadium/Pauling/server"
@@ -62,6 +63,8 @@ func main() {
 		}()
 		helpers.Logger.Info("Running Profiler on %s", address)
 	}
+
+	database.Connect()
 
 	pid := &pid.Instance{}
 	if pid.Create() == nil {
