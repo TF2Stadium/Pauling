@@ -315,7 +315,16 @@ func (s *Server) Setup() error {
 	f.Close()
 
 	helpers.Logger.Debug("#%d: Creating listener", s.LobbyId)
-	s.source = listener.AddSource(s, s.rcon)
+	eventlistener := &TF2RconWrapper.EventListener{
+		PlayerConnected:     s.PlayerConnected,
+		PlayerDisconnected:  s.PlayerDisconnected,
+		PlayerGlobalMessage: s.PlayerGlobalMessage,
+		GameOver:            s.GameOver,
+		CVarChange:          s.CVarChange,
+		LogFileClosed:       s.LogFileClosed,
+	}
+
+	s.source = listener.AddSource(eventlistener, s.rcon)
 	database.SetSecret(s.source.Secret, s.Info.ID)
 
 	// change map,
