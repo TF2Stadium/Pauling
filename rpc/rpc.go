@@ -3,7 +3,6 @@ package rpc
 import (
 	"errors"
 	"net"
-	"net/http"
 	"net/rpc"
 	"syscall"
 	"time"
@@ -15,18 +14,23 @@ import (
 	"github.com/TF2Stadium/PlayerStatsScraper/steamid"
 	rconwrapper "github.com/TF2Stadium/TF2RconWrapper"
 	"github.com/james4k/rcon"
+	"github.com/streadway/amqp"
+	"github.com/vibhavp/amqp-rpc"
 )
 
 type Pauling struct{}
 type Noreply struct{}
 
-func StartRPC(l net.Listener) {
+func StartRPC(url string) {
+	conn, err := amqp.Dial(url)
+	if err != nil {
+		helpers.Logger.Fatal(err)
+	}
+
+	serverCodec, err := amqprpc.NewServerCodec(conn, config.Constants.RPCQueue, amqprpc.JSONCodec{})
 	pauling := new(Pauling)
 	rpc.Register(pauling)
-	rpc.HandleHTTP()
-
-	helpers.Logger.Info("Listening on %s", config.Constants.RPCAddr)
-	helpers.Logger.Fatal(http.Serve(l, nil))
+	rpc.ServeCodec(serverCodec)
 }
 
 func (Pauling) VerifyInfo(info *models.ServerRecord, nop *Noreply) error {
