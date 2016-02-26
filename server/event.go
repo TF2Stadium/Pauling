@@ -3,7 +3,6 @@ package server
 import (
 	"encoding/json"
 
-	"github.com/TF2Stadium/Helen/models/event"
 	"github.com/TF2Stadium/Pauling/config"
 	"github.com/TF2Stadium/Pauling/helpers"
 	"github.com/streadway/amqp"
@@ -13,6 +12,26 @@ var (
 	conn    *amqp.Connection
 	queue   amqp.Queue
 	channel *amqp.Channel
+)
+
+//Mirrored across github.com/TF2Stadium/Helen/event
+type Event struct {
+	Name    string
+	SteamID string
+
+	LobbyID uint
+	LogsID  int //logs.tf ID
+}
+
+const (
+	PlayerDisconnected string = "playerDisc"
+	PlayerSubstituted  string = "playerSub"
+	PlayerConnected    string = "playerConn"
+	PlayerChat         string = "playerChat"
+
+	DisconnectedFromServer string = "discFromServer"
+	MatchEnded             string = "matchEnded"
+	Test                   string = "test"
 )
 
 func connectMQ() {
@@ -44,7 +63,7 @@ func connectMQ() {
 	helpers.Logger.Info("Sending events on queue %s on %s", config.Constants.RabbitMQQueue, config.Constants.RabbitMQURL)
 }
 
-func publishEvent(e event.Event) {
+func publishEvent(e Event) {
 	bytes, _ := json.Marshal(e)
 	channel.Publish(
 		"",

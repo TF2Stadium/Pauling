@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/TF2Stadium/Helen/models"
-	"github.com/TF2Stadium/Helen/models/event"
 	"github.com/TF2Stadium/Pauling/config"
 	"github.com/TF2Stadium/Pauling/database"
 	"github.com/TF2Stadium/Pauling/helpers"
@@ -127,8 +126,8 @@ func (s *Server) StartVerifier(ticker *time.Ticker) {
 			s.rcon, err = TF2RconWrapper.NewTF2RconConnection(s.Info.Host, s.Info.RconPassword)
 		}
 		if count == 5 {
-			publishEvent(event.Event{
-				Name:    event.DisconnectedFromServer,
+			publishEvent(Event{
+				Name:    DisconnectedFromServer,
 				LobbyID: s.LobbyId})
 
 			listener.RemoveSource(s.source, s.rcon)
@@ -158,8 +157,8 @@ func (s *Server) PlayerConnected(data TF2RconWrapper.PlayerData) {
 	commID, _ := steamid.SteamIdToCommId(data.SteamId)
 	allowed, reason := database.IsAllowed(s.LobbyId, commID)
 	if allowed {
-		publishEvent(event.Event{
-			Name:    event.PlayerConnected,
+		publishEvent(Event{
+			Name:    PlayerConnected,
 			LobbyID: s.LobbyId,
 			SteamID: commID,
 		})
@@ -172,8 +171,8 @@ func (s *Server) PlayerDisconnected(data TF2RconWrapper.PlayerData) {
 	commID, _ := steamid.SteamIdToCommId(data.SteamId)
 	allowed, _ := database.IsAllowed(s.LobbyId, commID)
 	if allowed {
-		publishEvent(event.Event{
-			Name:    event.PlayerDisconnected,
+		publishEvent(Event{
+			Name:    PlayerDisconnected,
 			LobbyID: s.LobbyId,
 			SteamID: commID})
 	}
@@ -192,8 +191,8 @@ func (s *Server) PlayerGlobalMessage(data TF2RconWrapper.PlayerData, text string
 		} else {
 			commID, _ := steamid.SteamIdToCommId(data.SteamId)
 
-			publishEvent(event.Event{
-				Name:    event.PlayerSubstituted,
+			publishEvent(Event{
+				Name:    PlayerSubstituted,
 				LobbyID: s.LobbyId,
 				SteamID: commID})
 
@@ -242,8 +241,8 @@ func (s *Server) LogFileClosed() {
 		helpers.Logger.Warning("%d: %s", s.LobbyId, err.Error())
 		ioutil.WriteFile(fmt.Sprintf("%d.log", s.LobbyId), logsBuff.Bytes(), 0666)
 	}
-	publishEvent(event.Event{
-		Name:    event.MatchEnded,
+	publishEvent(Event{
+		Name:    MatchEnded,
 		LobbyID: s.LobbyId,
 		LogsID:  logID})
 	return
@@ -373,7 +372,6 @@ func (s *Server) ExecConfig() error {
 	}
 
 	formatConfigPath := FormatConfigName(s.Type)
-	helpers.Logger.Debug(formatConfigPath)
 
 	if s.Type != models.LobbyTypeDebug {
 		err = ExecFile("base.cfg", s.rcon)
@@ -414,8 +412,8 @@ func (s *Server) Verify() bool {
 	for err != nil { //TODO: Stop connection after x retries
 		if retries == 6 {
 			//Logger.Warning("#%d: Couldn't query %s after 5 retries", s.LobbyId, s.Info.Host)
-			publishEvent(event.Event{
-				Name:    event.DisconnectedFromServer,
+			publishEvent(Event{
+				Name:    DisconnectedFromServer,
 				LobbyID: s.LobbyId})
 
 			return false
@@ -496,8 +494,8 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 
 	if target == source {
 		// !rep'ing themselves
-		publishEvent(event.Event{
-			Name:    event.PlayerSubstituted,
+		publishEvent(Event{
+			Name:    PlayerSubstituted,
 			LobbyID: s.LobbyId,
 			SteamID: source})
 
@@ -528,8 +526,8 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 		helpers.Logger.Debug("Reported")
 
 		s.rcon.Sayf("Reporting %s %s: %s", team, argSlot, name)
-		publishEvent(event.Event{
-			Name:    event.PlayerSubstituted,
+		publishEvent(Event{
+			Name:    PlayerSubstituted,
 			SteamID: target,
 			LobbyID: s.LobbyId})
 
