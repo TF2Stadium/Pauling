@@ -2,65 +2,39 @@ package rpc
 
 import (
 	"errors"
-	"fmt"
 	"net"
-	"net/http"
 	"net/rpc"
-	"sync"
 	"syscall"
 	"time"
 
 	"github.com/TF2Stadium/Helen/models"
 	"github.com/TF2Stadium/Pauling/config"
-	"github.com/TF2Stadium/Pauling/helen"
 	"github.com/TF2Stadium/Pauling/helpers"
 	"github.com/TF2Stadium/Pauling/server"
 	"github.com/TF2Stadium/PlayerStatsScraper/steamid"
 	rconwrapper "github.com/TF2Stadium/TF2RconWrapper"
 	"github.com/james4k/rcon"
+	"github.com/streadway/amqp"
+	"github.com/vibhavp/amqp-rpc"
 )
 
 type Pauling struct{}
 type Noreply struct{}
 
-func StartRPC() {
-	pauling := new(Pauling)
-	rpc.Register(pauling)
-	rpc.HandleHTTP()
-
-	l, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%s", config.Constants.PortRPC))
+func StartRPC(url string) {
+	conn, err := amqp.Dial(url)
 	if err != nil {
 		helpers.Logger.Fatal(err)
 	}
-	helpers.Logger.Info("Listening on %s", config.Constants.PortRPC)
-	helpers.Logger.Fatal(http.Serve(l, nil))
+
+	serverCodec, err := amqprpc.NewServerCodec(conn, config.Constants.RPCQueue, amqprpc.JSONCodec{})
+	pauling := new(Pauling)
+	rpc.Register(pauling)
+	rpc.ServeCodec(serverCodec)
 }
 
-func (_ *Pauling) VerifyInfo(info *models.ServerRecord, nop *Noreply) error {
-	c, err := rconwrapper.NewTF2RconConnection(info.Host, info.RconPassword)
-	if c != nil {
-		defer c.Close()
-
-		c.Query("log on; sv_rcon_log 1; sv_logflush 1")
-		listener := server.RconListener.CreateServerListener(c)
-
-		tick := time.After(time.Second * 5)
-		err := make(chan error)
-
-		go func() {
-			select {
-			case <-tick:
-				listener.Close(c)
-				err <- errors.New("Server doesn't support log redirection. Make sure your server isn't blocking outgoing logs.")
-			case <-listener.RawMessages:
-				listener.Close(c)
-				err <- nil
-			}
-		}()
-		c.Query("sv_password")
-
-		return <-err
-	}
+func (Pauling) VerifyInfo(info *models.ServerRecord, nop *Noreply) error {
+	_, err := rconwrapper.NewTF2RconConnection(info.Host, info.RconPassword)
 	if err != nil {
 		switch err.(type) {
 		case *net.OpError:
@@ -80,10 +54,11 @@ func (_ *Pauling) VerifyInfo(info *models.ServerRecord, nop *Noreply) error {
 
 		}
 	}
-	return errors.New("Couldn't connect to the server.")
+
+	return nil
 }
 
-func (_ *Pauling) SetupServer(args *models.Args, nop *Noreply) error {
+func (Pauling) SetupServer(args *models.Args, nop *Noreply) error {
 	s := server.NewServer()
 	s.LobbyId = args.Id
 	s.Info = args.Info
@@ -104,23 +79,17 @@ func (_ *Pauling) SetupServer(args *models.Args, nop *Noreply) error {
 	return nil
 }
 
-func (_ *Pauling) ReExecConfig(args *models.Args, nop *Noreply) error {
+func (Pauling) ReExecConfig(args *models.Args, nop *Noreply) error {
 	s, err := server.GetServer(args.Id)
 	if err != nil {
 		return err
 	}
 
 	err = s.ExecConfig()
-	if err != nil {
-		return err
-	}
-
-	err = s.Rcon.ChangeMap(s.Map)
-
 	return err
 }
 
-func (_ *Pauling) End(args *models.Args, nop *Noreply) error {
+func (Pauling) End(args *models.Args, nop *Noreply) error {
 	s, err := server.GetServer(args.Id)
 	if err != nil {
 		return err
@@ -128,54 +97,38 @@ func (_ *Pauling) End(args *models.Args, nop *Noreply) error {
 
 	server.DeleteServer(s.LobbyId)
 	//now := time.Now().Unix()
-	go s.ServerListener.Close(s.Rcon)
-	s.StopLogListener <- struct{}{}
+	s.StopListening()
 	//Logger.Debug("%d", time.Now().Unix()-now)
 
 	return nil
 }
 
-func (_ *Pauling) DisallowPlayer(args *models.Args, nop *Noreply) error {
+func (Pauling) DisallowPlayer(args *models.Args, nop *Noreply) error {
 	s, err := server.GetServer(args.Id)
 	if err != nil {
 		return err
 	}
 
-	id, _ := steamid.CommIdToSteamId(args.SteamId)
-	server.ResetReportCount(id, args.Id)
+	steamID, _ := steamid.CommIdToSteamId(args.SteamId) //legacy steam id
+	server.ResetReportCount(steamID, args.Id)
 
-	players, _ := s.Rcon.GetPlayers()
-	for _, player := range players {
-		if player.SteamID == id {
-			s.Rcon.KickPlayer(player, "[tf2stadium.com] You have been replaced.")
-		}
-	}
+	s.KickPlayer(args.SteamId, "[tf2stadium.com] You have been replaced.")
 
 	return nil
 }
 
-func (*Pauling) Say(args *models.Args, nop *Noreply) error {
+func (Pauling) Say(args *models.Args, nop *Noreply) error {
 	s, err := server.GetServer(args.Id)
 	if err != nil {
 		return err
 	}
 
-	return s.Rcon.Say(args.Text)
+	return s.Say(args.Text)
 }
 
 func (Pauling) Exists(lobbyID uint, reply *bool) error {
 	_, err := server.GetServer(lobbyID)
 	*reply = err == nil
 
-	return nil
-}
-
-var once = new(sync.Once)
-
-func (Pauling) Ping(struct{}, *struct{}) error {
-	once.Do(func() {
-		helen.Connect(config.Constants.PortHelen)
-		server.SetupServers()
-	})
 	return nil
 }

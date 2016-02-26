@@ -1,52 +1,77 @@
 package server
 
 import (
-	"github.com/TF2Stadium/Helen/rpc"
-	"github.com/TF2Stadium/Pauling/helen"
+	"encoding/json"
+
+	"github.com/TF2Stadium/Pauling/config"
+	"github.com/TF2Stadium/Pauling/helpers"
+	"github.com/streadway/amqp"
 )
 
-func send(e rpc.Event) { helen.Call("Event.Handle", e, struct{}{}) }
+var (
+	conn    *amqp.Connection
+	queue   amqp.Queue
+	channel *amqp.Channel
+)
 
-func PlayerDisconnected(lobbyID, playerID uint) {
-	e := rpc.Event{
-		Name:     rpc.PlayerDisconnected,
-		LobbyID:  lobbyID,
-		PlayerID: playerID,
-	}
+//Mirrored across github.com/TF2Stadium/Helen/event
+type Event struct {
+	Name    string
+	SteamID string
 
-	send(e)
+	LobbyID uint
+	LogsID  int //logs.tf ID
 }
 
-func PlayerConnected(lobbyID, playerID uint) {
-	e := rpc.Event{
-		Name:     rpc.PlayerConnected,
-		LobbyID:  lobbyID,
-		PlayerID: playerID}
-	send(e)
+const (
+	PlayerDisconnected string = "playerDisc"
+	PlayerSubstituted  string = "playerSub"
+	PlayerConnected    string = "playerConn"
+	PlayerChat         string = "playerChat"
+
+	DisconnectedFromServer string = "discFromServer"
+	MatchEnded             string = "matchEnded"
+	Test                   string = "test"
+)
+
+func connectMQ() {
+	var err error
+
+	conn, err = amqp.Dial(config.Constants.RabbitMQURL)
+	if err != nil {
+		helpers.Logger.Fatalf("Failed to connect to RabbitMQ - %s", err.Error())
+	}
+
+	channel, err = conn.Channel()
+	if err != nil {
+		helpers.Logger.Fatalf("Failed to open a channel - %s", err.Error())
+	}
+
+	queue, err = channel.QueueDeclare(
+		config.Constants.RabbitMQQueue, // name
+		false, // durable
+		false, // delete when unused
+		false, // exclusive
+		false, // no-wait
+		nil,   // arguments
+	)
+
+	if err != nil {
+		helpers.Logger.Fatalf("Failed to declare a queue - %s", err.Error())
+	}
+
+	helpers.Logger.Info("Sending events on queue %s on %s", config.Constants.RabbitMQQueue, config.Constants.RabbitMQURL)
 }
 
-func DisconnectedFromServer(lobbyID uint) {
-	e := rpc.Event{
-		Name:    rpc.DisconnectedFromServer,
-		LobbyID: lobbyID,
-	}
-	send(e)
-}
-
-func Substitute(lobbyID, playerID uint) {
-	e := rpc.Event{
-		Name:     rpc.PlayerSubstituted,
-		LobbyID:  lobbyID,
-		PlayerID: playerID,
-	}
-	send(e)
-}
-
-func MatchEnded(lobbyID uint, logsID int) {
-	e := rpc.Event{
-		Name:    rpc.MatchEnded,
-		LobbyID: lobbyID,
-		LogsID:  logsID,
-	}
-	send(e)
+func publishEvent(e Event) {
+	bytes, _ := json.Marshal(e)
+	channel.Publish(
+		"",
+		queue.Name,
+		false,
+		false,
+		amqp.Publishing{
+			ContentType: "application/json",
+			Body:        bytes,
+		})
 }

@@ -21,7 +21,7 @@ var formatMap = map[models.LobbyType]string{
 	models.LobbyTypeDebug:      "debug",
 }
 
-var rMapName = regexp.MustCompile(`(.+)_(.+)`)
+var rMapName = regexp.MustCompile(`^([[:alnum:]]+_[[:alnum:]]+|workshop/[0-9]{1,12})$`)
 var ErrInvalidMap = errors.New("Invalid Map Name.")
 
 func ConfigName(mapName string, lobbyType models.LobbyType, ruleset string) (string, error) {
@@ -40,6 +40,10 @@ func ConfigName(mapName string, lobbyType models.LobbyType, ruleset string) (str
 	return file, nil
 }
 
+func FormatConfigName(lobbyType models.LobbyType) string {
+	return fmt.Sprintf("formats/%s.cfg", formatMap[lobbyType])
+}
+
 //Execute file located at path on rcon
 //TODO: Shouldn't this be in TF2RconWrapper?
 func ExecFile(path string, rcon *tf2rcon.TF2RconConnection) error {
@@ -53,6 +57,8 @@ func ExecFile(path string, rcon *tf2rcon.TF2RconConnection) error {
 
 	var config string
 	for _, line := range lines {
+		line = strings.TrimSpace(line)
+
 		if len(config+line) > 1024-10 {
 			_, err := rcon.Query(config)
 			if err != nil && err != tf2rcon.ErrUnknownCommand {
@@ -60,13 +66,19 @@ func ExecFile(path string, rcon *tf2rcon.TF2RconConnection) error {
 			}
 			config = ""
 		}
-		config += line + "; "
+
+		if line != "" {
+			config += line + ";"
+		}
 	}
 
-	_, err = rcon.Query(config)
-	if err != nil {
-		return err
+	if config != "" {
+		_, err = rcon.Query(config)
+		if err != nil {
+			return err
+		}
 	}
+
 	return nil
 
 }
