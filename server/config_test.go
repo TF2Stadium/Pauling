@@ -35,11 +35,10 @@ func TestConfigName(t *testing.T) {
 
 	for _, test := range cases {
 		name, err := ConfigName(test.mapName, test.lobbyType, test.ruleset)
-		assert.Nil(t, err)
+		assert.NoError(t, err, "map %s | lobby type %s", test.mapName, formatMap[test.lobbyType])
 		assert.Equal(t, name, test.config)
 		file, err := os.Open(configPath + "/" + test.config)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		file.Close()
-
 	}
 }
