@@ -22,7 +22,10 @@ dependencies:
       #- ./linux-amd64/glide -y ./glide.yaml install
 test:
   override:
+      - mv configs configsgit
+      - cp -R configsgit/configs .
       - go test $(go list ./... | grep -v /vendor/)
+      - mv configsgit configs
 deployment:
   master:
     branch: master
