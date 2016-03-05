@@ -22,7 +22,10 @@ dependencies:
       #- ./linux-amd64/glide -y ./glide.yaml install
 test:
   override:
+      - mv configs configsgit
+      - cp -R configsgit/configs .
       - go test $(go list ./... | grep -v /vendor/)
+      - mv configsgit configs
 deployment:
   master:
     branch: master
@@ -32,8 +35,9 @@ deployment:
       - rsync -rl -e "ssh -p $SSH_PORT" binaries/* $BACKEND_USER@tf2stadium.com:$BACKEND_DEPLOY_PATH_PROD
       - ssh -p $SSH_PORT $BACKEND_USER@tf2stadium.com $BACKEND_DEPLOY_SCRIPT_PROD
       - docker login -e $DOCKER_EMAIL -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
-      - make docker
-      - docker push tf2stadium/pauling
+      - make static -B
+      - docker build -t tf2stadium/pauling:latest .
+      - docker push tf2stadium/pauling:latest
   dev:
     branch: dev
     commands:
@@ -41,3 +45,8 @@ deployment:
       - go build -race -o binaries/pauling-dev *.go
       - rsync -rl -e "ssh -p $SSH_PORT" binaries/* $BACKEND_USER@tf2stadium.com:$BACKEND_DEPLOY_PATH_DEV
       - ssh -p $SSH_PORT $BACKEND_USER@tf2stadium.com $BACKEND_DEPLOY_SCRIPT_DEV
+      - docker login -e $DOCKER_EMAIL -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
+      - make static -B
+      - docker build -t tf2stadium/pauling:dev .
+      - docker push tf2stadium/pauling:dev
+  
