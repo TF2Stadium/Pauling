@@ -25,6 +25,7 @@ test:
       - mv configs configsgit
       - cp -R configsgit/configs .
       - go test $(go list ./... | grep -v /vendor/)
+      - rm -rf configs
       - mv configsgit configs
 deployment:
   master:
