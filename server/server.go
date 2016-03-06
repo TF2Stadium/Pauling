@@ -183,6 +183,10 @@ func (s *Server) PlayerDisconnected(data TF2RconWrapper.PlayerData) {
 	}
 }
 
+func (s *Server) TournamentStarted() {
+	ExecFile("soap_off.cfg", s.rcon)
+}
+
 func (s *Server) PlayerGlobalMessage(data TF2RconWrapper.PlayerData, text string) {
 	//Logger.Debug("GLOBAL %s:", text)
 
@@ -328,6 +332,7 @@ func (s *Server) Setup() error {
 		GameOver:            s.GameOver,
 		CVarChange:          s.CVarChange,
 		LogFileClosed:       s.LogFileClosed,
+		TournamentStarted:   s.TournamentStarted,
 	}
 
 	s.source = listener.AddSource(eventlistener, s.rcon)
