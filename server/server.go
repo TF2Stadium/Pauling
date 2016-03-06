@@ -35,6 +35,7 @@ type Server struct {
 	Info   models.ServerRecord
 
 	matchEnded bool
+	curplayers int
 }
 
 // func SetupServers() {
@@ -162,6 +163,10 @@ func (s *Server) PlayerConnected(data TF2RconWrapper.PlayerData) {
 			LobbyID: s.LobbyId,
 			SteamID: commID,
 		})
+		s.curplayers++
+		if s.curplayers == 2*models.NumberOfClassesMap[s.Type] {
+			ExecFile("soap_off.cfg", s.rcon)
+		}
 	} else {
 		s.rcon.KickPlayerID(data.UserId, "[tf2stadium.com] "+reason)
 	}
@@ -200,6 +205,8 @@ func (s *Server) PlayerGlobalMessage(data TF2RconWrapper.PlayerData, text string
 				data.Username, data.SteamId)
 			s.rcon.Say(say)
 		}
+	} else if strings.HasPrefix(text, "!soapoff ") {
+		ExecFile("soap_off.cfg", s.rcon)
 	}
 }
 
