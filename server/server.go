@@ -19,6 +19,33 @@ import (
 	"github.com/TF2Stadium/TF2RconWrapper"
 )
 
+const (
+	scout = iota
+	soldier
+	pyro
+	demoman
+	heavy
+	engineer
+	sniper
+	medic
+	spy
+)
+
+type classTime struct {
+	current     int // current class being played
+	lastChanged time.Time
+
+	Scout    time.Duration
+	Soldier  time.Duration
+	Pyro     time.Duration
+	Demoman  time.Duration
+	Heavy    time.Duration
+	Engineer time.Duration
+	Sniper   time.Duration
+	Medic    time.Duration
+	Spy      time.Duration
+}
+
 type Server struct {
 	Map       string // lobby map
 	League    string
@@ -36,6 +63,9 @@ type Server struct {
 
 	matchEnded bool
 	curplayers int
+	// handlers are called synchronously for each server,
+	// so we don't need to protect this map
+	playerClasses map[string]*classTime //steamID -> playerClasse
 }
 
 // func SetupServers() {
@@ -71,8 +101,9 @@ type Server struct {
 
 func NewServer() *Server {
 	s := &Server{
-		StopRepTimer: make(map[string]chan struct{}),
-		StopVerifier: make(chan struct{}),
+		StopRepTimer:  make(map[string]chan struct{}),
+		StopVerifier:  make(chan struct{}),
+		playerClasses: make(map[string]*classTime),
 	}
 
 	return s
@@ -167,9 +198,67 @@ func (s *Server) PlayerConnected(data TF2RconWrapper.PlayerData) {
 		if s.curplayers == 2*models.NumberOfClassesMap[s.Type] {
 			ExecFile("soap_off.cfg", s.rcon)
 		}
+		_, ok := s.playerClasses[commID]
+		if !ok {
+			s.playerClasses[commID] = new(classTime)
+		}
 	} else {
 		s.rcon.KickPlayerID(data.UserId, "[tf2stadium.com] "+reason)
 	}
+}
+
+var classes = map[string]int{
+	"scout":        scout,
+	"soldier":      soldier,
+	"pyro":         pyro,
+	"engineer":     engineer,
+	"heavyweapons": heavy,
+	"demoman":      demoman,
+	"spy":          spy,
+	"medic":        medic,
+	"sniper":       sniper,
+}
+
+func (s *Server) PlayerClassChanged(player TF2RconWrapper.PlayerData, class string) {
+	commID, _ := steamid.SteamIdToCommId(player.SteamId)
+	classtime, ok := s.playerClasses[commID]
+	if !ok { //shouldn't happen, map entry for every player is created when they connect
+		helpers.Logger.Errorf("No map entry for %s found", commID)
+		return
+	}
+
+	if classtime.lastChanged.IsZero() {
+		classtime.current = classes[class]
+		classtime.lastChanged = time.Now()
+		return
+	}
+
+	var prev *time.Duration // previous class
+
+	switch classtime.current {
+	case scout:
+		prev = &classtime.Scout
+	case soldier:
+		prev = &classtime.Soldier
+	case pyro:
+		prev = &classtime.Pyro
+	case demoman:
+		prev = &classtime.Demoman
+	case heavy:
+		prev = &classtime.Heavy
+	case engineer:
+		prev = &classtime.Engineer
+	case sniper:
+		prev = &classtime.Sniper
+	case medic:
+		prev = &classtime.Medic
+	case spy:
+		prev = &classtime.Spy
+	}
+
+	*prev += time.Since(classtime.lastChanged)
+	classtime.current = classes[class]
+	classtime.lastChanged = time.Now()
 }
 
 func (s *Server) PlayerDisconnected(data TF2RconWrapper.PlayerData) {
@@ -253,9 +342,10 @@ func (s *Server) LogFileClosed() {
 		ioutil.WriteFile(fmt.Sprintf("%d.log", s.LobbyId), logsBuff.Bytes(), 0666)
 	}
 	publishEvent(Event{
-		Name:    MatchEnded,
-		LobbyID: s.LobbyId,
-		LogsID:  logID})
+		Name:       MatchEnded,
+		LobbyID:    s.LobbyId,
+		LogsID:     logID,
+		ClassTimes: s.playerClasses})
 	return
 }
 
@@ -332,6 +422,7 @@ func (s *Server) Setup() error {
 		GameOver:            s.GameOver,
 		CVarChange:          s.CVarChange,
 		LogFileClosed:       s.LogFileClosed,
+		PlayerClassChanged:  s.PlayerClassChanged,
 		TournamentStarted:   s.TournamentStarted,
 	}
 
@@ -348,6 +439,7 @@ func (s *Server) Setup() error {
 
 	time.Sleep(5 * time.Second)
 	helpers.Logger.Debug("#%d: Executing config.", s.LobbyId)
+	s.rcon.AddTag("TF2Stadium")
 	err = s.ExecConfig()
 	if err != nil { // retry connection
 		var count int
@@ -369,7 +461,6 @@ func (s *Server) Setup() error {
 	}
 
 	s.rcon.Query("tftrue_no_hats 0")
-	s.rcon.AddTag("TF2Stadium")
 
 	helpers.Logger.Debug("#%d: Configured", s.LobbyId)
 	return nil

@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	db gorm.DB
+	db *gorm.DB
 )
 
 type report struct {
