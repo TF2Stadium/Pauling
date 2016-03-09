@@ -19,8 +19,9 @@ type Event struct {
 	Name    string
 	SteamID string
 
-	LobbyID uint
-	LogsID  int //logs.tf ID
+	LobbyID    uint
+	LogsID     int //logs.tf ID
+	ClassTimes map[string]*classTime
 }
 
 const (
