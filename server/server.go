@@ -651,6 +651,8 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 			case <-stop:
 				return
 			}
+			//once a sub is found, the report count will be reset with
+			//the rpc's DisallowPlayer method
 			delete(s.StopRepTimer, team+argSlot)
 		}()
 
