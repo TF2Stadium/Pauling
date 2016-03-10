@@ -175,7 +175,7 @@ func (s *Server) StartVerifier(ticker *time.Ticker) {
 				return
 			}
 		case <-s.StopVerifier:
-			helpers.Logger.Debug("Stopping logger for lobby %d", s.LobbyId)
+			helpers.Logger.Debugf("Stopping logger for lobby %d", s.LobbyId)
 			s.rcon.Say("[tf2stadium.com] Lobby Ended.")
 			s.rcon.RemoveTag("TF2Stadium")
 			ticker.Stop()
@@ -338,7 +338,7 @@ func (s *Server) LogFileClosed() {
 
 	logID, err := logs.Upload(fmt.Sprintf("TF2Stadium Lobby #%d", s.LobbyId), s.Map, logsBuff)
 	if err != nil {
-		helpers.Logger.Warning("%d: %s", s.LobbyId, err.Error())
+		helpers.Logger.Warningf("%d: %s", s.LobbyId, err.Error())
 		ioutil.WriteFile(fmt.Sprintf("%d.log", s.LobbyId), logsBuff.Bytes(), 0666)
 	}
 	publishEvent(Event{
@@ -350,7 +350,7 @@ func (s *Server) LogFileClosed() {
 }
 
 func (s *Server) Setup() error {
-	helpers.Logger.Debug("#%d: Connecting to %s", s.LobbyId, s.Info.Host)
+	helpers.Logger.Debugf("#%d: Connecting to %s", s.LobbyId, s.Info.Host)
 
 	var err error
 	s.rcon, err = TF2RconWrapper.NewTF2RconConnection(s.Info.Host, s.Info.RconPassword)
@@ -359,14 +359,14 @@ func (s *Server) Setup() error {
 	}
 
 	// kick players
-	helpers.Logger.Debug("#%d: Kicking all players", s.LobbyId)
+	helpers.Logger.Debugf("#%d: Kicking all players", s.LobbyId)
 	kickErr := s.KickAll()
 
 	if kickErr != nil {
 		return kickErr
 	}
 
-	helpers.Logger.Debug("#%d: Setting whitelist", s.LobbyId)
+	helpers.Logger.Debugf("#%d: Setting whitelist", s.LobbyId)
 	// whitelist
 	_, err = s.rcon.Query(fmt.Sprintf("tftrue_whitelist_id %s", s.Whitelist))
 	if err == TF2RconWrapper.ErrUnknownCommand {
@@ -414,7 +414,7 @@ func (s *Server) Setup() error {
 	}
 	f.Close()
 
-	helpers.Logger.Debug("#%d: Creating listener", s.LobbyId)
+	helpers.Logger.Debugf("#%d: Creating listener", s.LobbyId)
 	eventlistener := &TF2RconWrapper.EventListener{
 		PlayerConnected:     s.PlayerConnected,
 		PlayerDisconnected:  s.PlayerDisconnected,
@@ -430,7 +430,7 @@ func (s *Server) Setup() error {
 	database.SetSecret(s.source.Secret, s.Info.ID)
 
 	// change map,
-	helpers.Logger.Debug("#%d: Changing Map", s.LobbyId)
+	helpers.Logger.Debugf("#%d: Changing Map", s.LobbyId)
 	mapErr := s.rcon.ChangeMap(s.Map)
 
 	if mapErr != nil {
@@ -438,12 +438,12 @@ func (s *Server) Setup() error {
 	}
 
 	time.Sleep(5 * time.Second)
-	helpers.Logger.Debug("#%d: Executing config.", s.LobbyId)
+	helpers.Logger.Debugf("#%d: Executing config.", s.LobbyId)
 	s.rcon.AddTag("TF2Stadium")
 	err = s.ExecConfig()
 	if err != nil { // retry connection
 		var count int
-		helpers.Logger.Error("%v", err)
+		helpers.Logger.Errorf("#%d: %v", s.LobbyId, err)
 
 		s.rcon.Close()
 		s.rcon, err = TF2RconWrapper.NewTF2RconConnection(s.Info.Host, s.Info.RconPassword)
@@ -453,7 +453,7 @@ func (s *Server) Setup() error {
 			s.rcon, err = TF2RconWrapper.NewTF2RconConnection(s.Info.Host, s.Info.RconPassword)
 		}
 		if count == 5 {
-			helpers.Logger.Error("#%d: %s", s.LobbyId, err.Error())
+			helpers.Logger.Errorf("#%d: %s", s.LobbyId, err.Error())
 			return err
 		}
 
@@ -462,7 +462,7 @@ func (s *Server) Setup() error {
 
 	s.rcon.Query("tftrue_no_hats 0")
 
-	helpers.Logger.Debug("#%d: Configured", s.LobbyId)
+	helpers.Logger.Debugf("#%d: Configured", s.LobbyId)
 	return nil
 }
 
@@ -593,7 +593,7 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 		return
 	}
 
-	helpers.Logger.Debug("#%d: %s (team %s) reporting %s (team %s)", s.LobbyId, source, originTeam, target, team)
+	helpers.Logger.Debugf("#%d: %s (team %s) reporting %s (team %s)", s.LobbyId, source, originTeam, target, team)
 
 	if target == source {
 		// !rep'ing themselves
@@ -602,7 +602,6 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 			LobbyID: s.LobbyId,
 			SteamID: source})
 
-		helpers.Logger.Debug("repported target == source")
 		say := fmt.Sprintf("Reporting player %s (%s)", data.Username, data.SteamId)
 		s.rcon.Say(say)
 		return
@@ -612,10 +611,9 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 	if err != nil {
 		if _, ok := err.(repError); ok {
 			s.rcon.Say("!rep: Already reported")
-			helpers.Logger.Error(err.Error())
 		} else {
-			s.rcon.Say("!rep: Reporting system error")
-			helpers.Logger.Error(err.Error())
+			s.rcon.Sayf("!rep: Reporting system error: %s", err.Error())
+			helpers.Logger.Errorf("#%d: %v", s.LobbyId, err)
 		}
 		return
 	}
@@ -626,8 +624,6 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 	switch curReps {
 	case repsNeeded[s.Type]:
 		//Got needed number of reports, ask helen to substitute player
-		helpers.Logger.Debug("Reported")
-
 		s.rcon.Sayf("Reporting %s %s: %s", team, argSlot, name)
 		publishEvent(Event{
 			Name:    PlayerSubstituted,
@@ -659,7 +655,6 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 
 	default:
 		s.rcon.Sayf("Got %d votes votes for reporting player %s (%d needed)", curReps, name, repsNeeded[s.Type])
-		helpers.Logger.Debug("Got %d reports", curReps)
 	}
 	return
 }
