@@ -25,12 +25,14 @@ func IsAllowed(lobbyID uint, commID string) (bool, string) {
 	var playerID uint
 	var needsSub bool
 	db.QueryRow("SELECT id FROM players WHERE steam_id = $1", commID).Scan(&playerID)
-	err := db.QueryRow("SELECT state, needs_sub FROM lobby_slots WHERE lobby_id = $1 AND player_id = $2", lobbyID, playerID).Scan(&state, &needsSub)
+	err := db.QueryRow("SELECT needs_sub FROM lobby_slots WHERE lobby_id = $1 AND player_id = $2", lobbyID, playerID).Scan(&needsSub)
 	if err != nil || needsSub {
 		return false, "You're not in the lobby."
 	}
 
-	if !needsSub && state == models.LobbyStateWaiting {
+	db.QueryRow("SELECT state FROM lobbies WHERE id = $1", lobbyID).Scan(&state)
+
+	if state == models.LobbyStateWaiting {
 		return false, "The lobby hasn't started yet."
 	}
 
