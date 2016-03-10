@@ -647,6 +647,7 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 			select {
 			case <-ticker.C:
 				s.rcon.Sayf("Reporting %s %s failed, couldn't get enough !rep in 1 minute.", team, argSlot)
+				ResetReportCount(target, s.LobbyId)
 			case <-stop:
 				return
 			}
