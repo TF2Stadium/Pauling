@@ -2,7 +2,6 @@ package server
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/TF2Stadium/Pauling/helpers"
 	"github.com/jinzhu/gorm"
@@ -31,8 +30,6 @@ func (e repError) Error() string {
 
 //CreateDB initializes the sqlite database
 func CreateDB() {
-	os.Remove("./pauling.db")
-
 	var err error
 	db, err = gorm.Open("sqlite3", "./pauling.db")
 	if err != nil {
