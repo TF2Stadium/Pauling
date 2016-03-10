@@ -37,8 +37,8 @@ func IsAllowed(lobbyID uint, commID string) (bool, string) {
 	return true, ""
 }
 
-func IsReported(lobbyID uint, commID string) (allowed bool) {
-	err := db.QueryRow("SELECT lobby_slots.needs_sub FROM lobby_slots INNER JOIN players ON lobby_slots.player_id = players.id WHERE lobby_slots.lobby_id = $1 AND players.steam_id = $2", lobbyID, commID).Scan(&allowed)
+func IsReported(lobbyID uint, commID string) (reported bool) {
+	err := db.QueryRow("SELECT lobby_slots.needs_sub FROM lobby_slots INNER JOIN players ON lobby_slots.player_id = players.id WHERE lobby_slots.lobby_id = $1 AND players.steam_id = $2", lobbyID, commID).Scan(&reported)
 	if err != nil {
 		helpers.Logger.Error(err.Error())
 	}
