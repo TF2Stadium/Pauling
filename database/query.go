@@ -22,22 +22,25 @@ func SetSecret(secret string, id uint) {
 
 func IsAllowed(lobbyID uint, commID string) (bool, string) {
 	var state models.LobbyState
+	var playerID uint
 	var needsSub bool
-
-	err := db.QueryRow("SELECT state, needs_sub FROM player_slots WHERE lobby_id = $1 AND steam_id = $2", lobbyID, commID).Scan(&state, &needsSub)
-	if err != nil {
+	db.QueryRow("SELECT id FROM players WHERE steam_id = $1", commID).Scan(&playerID)
+	err := db.QueryRow("SELECT needs_sub FROM lobby_slots WHERE lobby_id = $1 AND player_id = $2", lobbyID, playerID).Scan(&needsSub)
+	if err != nil || needsSub {
 		return false, "You're not in the lobby."
 	}
 
-	if !needsSub && state == models.LobbyStateWaiting {
+	db.QueryRow("SELECT state FROM lobbies WHERE id = $1", lobbyID).Scan(&state)
+
+	if state == models.LobbyStateWaiting {
 		return false, "The lobby hasn't started yet."
 	}
 
 	return true, ""
 }
 
-func IsReported(lobbyID uint, commID string) (allowed bool) {
-	err := db.QueryRow("SELECT needs_sub FROM player_slots WHERE lobby_id = $1 AND steam_id = $2", lobbyID, commID).Scan(&allowed)
+func IsReported(lobbyID uint, commID string) (reported bool) {
+	err := db.QueryRow("SELECT lobby_slots.needs_sub FROM lobby_slots INNER JOIN players ON lobby_slots.player_id = players.id WHERE lobby_slots.lobby_id = $1 AND players.steam_id = $2", lobbyID, commID).Scan(&reported)
 	if err != nil {
 		helpers.Logger.Error(err.Error())
 	}
@@ -46,7 +49,7 @@ func IsReported(lobbyID uint, commID string) (allowed bool) {
 
 func GetTeam(lobbyID uint, lobbyType models.LobbyType, commID string) (team string) {
 	var slot int
-	err := db.QueryRow("SELECT slot FROM player_slots WHERE lobby_id = $1 AND steam_id = $2", lobbyID, commID).Scan(&slot)
+	err := db.QueryRow("SELECT lobby_slots.slot FROM lobby_slots INNER JOIN players ON lobby_slots.player_id = players.id WHERE lobby_slots.lobby_id = $1 AND players.steam_id = $2", lobbyID, commID).Scan(&slot)
 	if err != nil {
 		helpers.Logger.Error(err.Error())
 	}
@@ -56,7 +59,7 @@ func GetTeam(lobbyID uint, lobbyType models.LobbyType, commID string) (team stri
 
 func GetSteamIDFromSlot(team, class string, lobbyID uint, lobbyType models.LobbyType) (commID string) {
 	slot, _ := models.LobbyGetPlayerSlot(lobbyType, team, class)
-	err := db.QueryRow("SELECT steam_id FROM player_slots WHERE lobby_id = $1 AND slot = $2", lobbyID, slot).Scan(&commID)
+	err := db.QueryRow("SELECT players.steam_id FROM players INNER JOIN lobby_slots ON players.id = lobby_slots.player_id WHERE lobby_slots.lobby_id = $1 AND lobby_slots.slot = $2", lobbyID, slot).Scan(&commID)
 	if err != nil {
 		helpers.Logger.Error(err.Error())
 	}

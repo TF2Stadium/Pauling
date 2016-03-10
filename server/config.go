@@ -21,7 +21,7 @@ var formatMap = map[models.LobbyType]string{
 	models.LobbyTypeDebug:      "debug",
 }
 
-var rMapName = regexp.MustCompile(`^(\w+(_+)*\w*|workshop/[0-9]{1,12})$`)
+var rMapName = regexp.MustCompile(`^\w+(_+)*\w*$`)
 var ErrInvalidMap = errors.New("Invalid Map Name.")
 
 func ConfigName(mapName string, lobbyType models.LobbyType, ruleset string) (string, error) {
