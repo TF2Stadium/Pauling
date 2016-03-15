@@ -573,7 +573,6 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 	}
 	team = database.GetTeam(s.LobbyId, s.Type, source)
 	//	helpers.Logger.Debug(team)
-	originTeam := team
 	if argTeam == "their" {
 		if team == "red" {
 			team = "blu"
@@ -594,8 +593,10 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 		s.rcon.Say("!rep: Unknown or empty slot")
 		return
 	}
-
-	helpers.Logger.Debugf("#%d: %s (team %s) reporting %s (team %s)", s.LobbyId, source, originTeam, target, team)
+	if database.IsReported(s.LobbyId, target) {
+		s.rcon.Say("Player has already been reported")
+		return
+	}
 
 	if target == source {
 		// !rep'ing themselves
