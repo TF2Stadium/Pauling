@@ -11,13 +11,7 @@ type constants struct {
 
 	PrintLogMessages bool   `envconfig:"PRINT_LOG_MESSAGES" default:"false"`
 	LogsPort         string `envconfig:"LOGS_PORT" default:"8002"`
-	// PortMQ           string `envconfig:"MQ_PORT"`
-	// AddrMQCtl        string `env:"MQ_CTL_ADDR"` // must include schema
-	RPCQueue string `envconfig:"RPC_QUEUE" default:"pauling"`
-	//HelenAddr string `envconfig:"HELEN_ADDR" default:"localhost:8081"`
-
-	//EtcdAddr    string `envconfig:"ETCD_ADDR"`
-	//EtcdService string `envconfig:"ETCD_SERVICE"`
+	RPCQueue         string `envconfig:"RPC_QUEUE" default:"pauling"`
 
 	LogsTFAPIKey  string `envconfig:"LOGSTF_KEY"`
 	RabbitMQURL   string `envconfig:"RABBITMQ_URL" default:"amqp://guest:guest@localhost:5672/"`
