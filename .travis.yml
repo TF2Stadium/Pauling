@@ -9,7 +9,7 @@ env:
 before_install:
   - go get github.com/Masterminds/glide
 install:
-  - glide install
+  - case $TRAVIS_BRANCH in master) glide -y glide.yml install ;; dev) glide -y glide-dev.yml install ;; esac
   - docker login -e="$DOCKER_EMAIL" -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
 script:
   - make static -B

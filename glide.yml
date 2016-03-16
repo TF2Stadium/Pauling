@@ -1,0 +1,23 @@
+package: github.com/TF2Stadium/Pauling
+import:
+- package: github.com/DSchalla/go-pid
+- package: github.com/TF2Stadium/Helen
+  vcs: git
+  version: master
+  subpackages:
+  - models
+- package: github.com/TF2Stadium/PlayerStatsScraper
+  subpackages:
+  - steamid
+- package: github.com/TF2Stadium/TF2RconWrapper
+- package: github.com/james4k/rcon
+- package: github.com/jinzhu/gorm
+- package: github.com/kelseyhightower/envconfig
+- package: github.com/lib/pq
+- package: github.com/mattn/go-sqlite3
+- package: github.com/op/go-logging
+- package: github.com/rakyll/gom
+  subpackages:
+  - http
+- package: github.com/streadway/amqp
+- package: github.com/vibhavp/amqp-rpc
