@@ -615,7 +615,8 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 		if _, ok := err.(repError); ok {
 			s.rcon.Say("!rep: Already reported")
 		} else {
-			s.rcon.Sayf("!rep: Reporting system error: %s", err.Error())
+			say := fmt.Sprintf("!rep: Reporting system error: %s", err.Error())
+			s.rcon.Say(say)
 			helpers.Logger.Errorf("#%d: %v", s.LobbyId, err)
 		}
 		return
@@ -627,7 +628,8 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 	switch curReps {
 	case repsNeeded[s.Type]:
 		//Got needed number of reports, ask helen to substitute player
-		s.rcon.Sayf("Reporting %s %s: %s", team, argSlot, name)
+		say := fmt.Sprintf("Reporting %s %s: %s", team, argSlot, name)
+		s.rcon.Say(say)
 		publishEvent(Event{
 			Name:    PlayerSubstituted,
 			SteamID: target,
@@ -649,7 +651,8 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 		go func() {
 			select {
 			case <-ticker.C:
-				s.rcon.Sayf("Reporting %s %s failed, couldn't get enough !rep in 1 minute.", team, argSlot)
+				say := fmt.Sprintf("Reporting %s %s failed, couldn't get enough !rep in 1 minute.", team, argSlot)
+				s.rcon.Say(say)
 				ResetReportCount(target, s.LobbyId)
 			case <-stop:
 				return
@@ -660,7 +663,8 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 		}()
 
 	default:
-		s.rcon.Sayf("Got %d votes votes for reporting player %s (%d needed)", curReps, name, repsNeeded[s.Type])
+		say := fmt.Sprintf("Got %d votes votes for reporting player %s (%d needed)", curReps, name, repsNeeded[s.Type])
+		s.rcon.Say(say)
 	}
 	return
 }
