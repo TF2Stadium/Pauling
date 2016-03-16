@@ -44,6 +44,15 @@ func FormatConfigName(lobbyType models.LobbyType) string {
 	return fmt.Sprintf("formats/%s.cfg", formatMap[lobbyType])
 }
 
+func stripComments(s string) string {
+	i := strings.Index(s, "//")
+	if i == -1 {
+		return s
+	} else {
+		return s[0:i]
+	}
+}
+
 //Execute file located at path on rcon
 //TODO: Shouldn't this be in TF2RconWrapper?
 func ExecFile(path string, rcon *tf2rcon.TF2RconConnection) error {
@@ -57,7 +66,7 @@ func ExecFile(path string, rcon *tf2rcon.TF2RconConnection) error {
 
 	var config string
 	for _, line := range lines {
-		line = strings.TrimSpace(line)
+		line = strings.TrimSpace(stripComments(line))
 
 		if len(config+line) > 1024-10 {
 			_, err := rcon.Query(config)
