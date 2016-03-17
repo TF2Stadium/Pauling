@@ -1,3 +1,3 @@
 Pauling - DEV
 =============
-[![Build Status](https://circleci.com/gh/TF2Stadium/Pauling/tree/dev.svg?style=svg)](https://circleci.com/gh/TF2Stadium/Pauling/tree/dev)
+[![Build Status](https://travis-ci.org/TF2Stadium/Pauling.svg?branch=master)](https://travis-ci.org/TF2Stadium/Pauling)
