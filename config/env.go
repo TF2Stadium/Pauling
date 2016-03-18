@@ -6,9 +6,6 @@ import (
 )
 
 type constants struct {
-	PortProfiler   string `envconfig:"PROFILER_PORT" default:"6061"`
-	ProfilerEnable bool   `envconfig:"PROFILER_ENABLE" default:"false"`
-
 	PrintLogMessages bool   `envconfig:"PRINT_LOG_MESSAGES" default:"false"`
 	LogsPort         string `envconfig:"LOGS_PORT" default:"8002"`
 	RPCQueue         string `envconfig:"RPC_QUEUE" default:"pauling"`
@@ -21,6 +18,8 @@ type constants struct {
 	DBDatabase string `envconfig:"DATABASE_NAME" default:"tf2stadium"`
 	DBUsername string `envconfig:"DATABASE_USERNAME" default:"tf2stadium"`
 	DBPassword string `envconfig:"DATABASE_PASSWORD" default:"dickbutt"`
+
+	ProfilerAddr string `envconfig:"PROFILER_ADDR"`
 }
 
 var Constants = constants{}
