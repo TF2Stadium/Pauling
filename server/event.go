@@ -22,6 +22,8 @@ type Event struct {
 	LobbyID    uint
 	LogsID     int //logs.tf ID
 	ClassTimes map[string]*classTime
+
+	Self bool // true if
 }
 
 const (
