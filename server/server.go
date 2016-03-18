@@ -292,7 +292,8 @@ func (s *Server) PlayerGlobalMessage(data TF2RconWrapper.PlayerData, text string
 			publishEvent(Event{
 				Name:    PlayerSubstituted,
 				LobbyID: s.LobbyId,
-				SteamID: commID})
+				SteamID: commID,
+				Self:    true})
 
 			say := fmt.Sprintf("Reporting player %s (%s)",
 				data.Username, data.SteamId)
@@ -603,7 +604,8 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 		publishEvent(Event{
 			Name:    PlayerSubstituted,
 			LobbyID: s.LobbyId,
-			SteamID: source})
+			SteamID: source,
+			Self:    true})
 
 		say := fmt.Sprintf("Reporting player %s (%s)", data.Username, data.SteamId)
 		s.rcon.Say(say)
