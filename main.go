@@ -27,8 +27,9 @@ func main() {
 	helpers.InitLogger()
 
 	if config.Constants.ProfilerAddr != "" {
-		go helpers.Logger.Errorf("%v", http.ListenAndServe(config.Constants.ProfilerAddr, nil))
 		helpers.Logger.Info("Running profiler on %s", config.Constants.ProfilerAddr)
+		go func() { helpers.Logger.Errorf("%v", http.ListenAndServe(config.Constants.ProfilerAddr, nil)) }()
+
 	}
 
 	database.Connect()
