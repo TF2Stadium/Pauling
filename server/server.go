@@ -61,7 +61,6 @@ type Server struct {
 	rcon   *TF2RconWrapper.TF2RconConnection
 	Info   models.ServerRecord
 
-	matchEnded bool
 	curplayers int
 	// handlers are called synchronously for each server,
 	// so we don't need to protect this map
@@ -304,33 +303,10 @@ func (s *Server) PlayerGlobalMessage(data TF2RconWrapper.PlayerData, text string
 	}
 }
 
-func (s *Server) PlayerTeamMessage(TF2RconWrapper.PlayerData, string) {}
-
-func (s *Server) PlayerClassChange(TF2RconWrapper.PlayerData, string) {}
-
-func (s *Server) PlayerTeamChange(TF2RconWrapper.PlayerData, string) {}
-
 func (s *Server) GameOver() {
-	s.matchEnded = true
-}
-
-func (s *Server) CVarChange(variable string, value string) {
-	if variable == "sv_password" {
-		// ServerCvar includes the new variable value--but for
-		// sv_password it is ***PROTECTED***
-		if value != s.Info.ServerPassword {
-			s.rcon.ChangeServerPassword(s.Info.ServerPassword)
-		}
-	}
-}
-
-func (s *Server) LogFileClosed() {
-	if !s.matchEnded {
-		return
-	}
-
-	logsBuff := s.source.Logs()
 	s.StopListening()
+	logsBuff := s.source.Logs()
+	logsBuff.WriteString("L " + time.Now().Format(TF2RconWrapper.TimeFormat) + ": Log file closed.\n")
 
 	if config.Constants.LogsTFAPIKey == "" {
 		helpers.Logger.Debug("No logs.tf API key, writing logs to file")
@@ -348,6 +324,16 @@ func (s *Server) LogFileClosed() {
 		LogsID:     logID,
 		ClassTimes: s.playerClasses})
 	return
+}
+
+func (s *Server) CVarChange(variable string, value string) {
+	if variable == "sv_password" {
+		// ServerCvar includes the new variable value--but for
+		// sv_password it is ***PROTECTED***
+		if value != s.Info.ServerPassword {
+			s.rcon.ChangeServerPassword(s.Info.ServerPassword)
+		}
+	}
 }
 
 func (s *Server) Setup() error {
@@ -422,7 +408,6 @@ func (s *Server) Setup() error {
 		PlayerGlobalMessage: s.PlayerGlobalMessage,
 		GameOver:            s.GameOver,
 		CVarChange:          s.CVarChange,
-		LogFileClosed:       s.LogFileClosed,
 		PlayerClassChanged:  s.PlayerClassChanged,
 		TournamentStarted:   s.TournamentStarted,
 	}
