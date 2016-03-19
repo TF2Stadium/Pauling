@@ -648,10 +648,10 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 			//the rpc's DisallowPlayer method
 			delete(s.StopRepTimer, team+argSlot)
 		}()
-
-	default:
-		say := fmt.Sprintf("Got %d votes votes for reporting player %s (%d needed)", curReps, name, repsNeeded[s.Type])
-		s.rcon.Say(say)
 	}
+
+	say := fmt.Sprintf("Got %d votes votes for reporting player %s (%d needed)", curReps, name, repsNeeded[s.Type])
+	s.rcon.Say(say)
+
 	return
 }
