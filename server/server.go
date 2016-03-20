@@ -109,7 +109,7 @@ func NewServer() *Server {
 }
 
 func (s *Server) StopListening() {
-	go listener.RemoveSource(s.source, s.rcon)
+	listener.RemoveSource(s.source, s.rcon)
 	s.StopVerifier <- struct{}{}
 }
 
@@ -528,7 +528,7 @@ var (
 
 	repsNeeded = map[models.LobbyType]int{
 		models.LobbyTypeSixes:      7,
-		models.LobbyTypeDebug:      1,
+		models.LobbyTypeDebug:      2,
 		models.LobbyTypeHighlander: 7,
 		models.LobbyTypeFours:      5,
 		models.LobbyTypeBball:      3,
@@ -536,16 +536,12 @@ var (
 	}
 )
 
-func (s *Server) repUsage() {
-	s.rcon.Say("Usage: !rep our/their/red/blu slotname")
-}
-
 func (s *Server) report(data TF2RconWrapper.PlayerData) {
 	var team string
 
 	matches := rReport.FindStringSubmatch(data.Text)
 	if len(matches) != 3 {
-		s.repUsage()
+		s.rcon.Say("Usage: !rep our/their/red/blu slotname")
 		return
 	}
 
@@ -557,28 +553,34 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 		s.rcon.Say("!rep: Player has already been reported.")
 		return
 	}
+
 	team = database.GetTeam(s.LobbyId, s.Type, source)
 	//	helpers.Logger.Debug(team)
-	if argTeam == "their" {
+
+	switch argTeam {
+	case "their":
 		if team == "red" {
 			team = "blu"
 		} else {
 			team = "red"
 		}
-	} else if argTeam == "blu" || argTeam == "red" {
+	case "our":
+		// team = team
+	case "blu", "red":
 		team = argTeam
-	} else if argTeam == "blue" {
+	case "blue":
 		team = "blu"
-	} else if argTeam != "our" {
-		s.repUsage()
+	default:
+		s.rcon.Say("Usage: !rep our/their/red/blu slotname")
 		return
 	}
 
-	target := database.GetSteamIDFromSlot(team, argSlot, s.LobbyId, s.Type)
-	if target == "" {
+	target, err := database.GetSteamIDFromSlot(team, argSlot, s.LobbyId, s.Type)
+	if err != nil {
 		s.rcon.Say("!rep: Unknown or empty slot")
 		return
 	}
+
 	if database.IsReported(s.LobbyId, target) {
 		s.rcon.Say("Player has already been reported")
 		return
@@ -597,21 +599,24 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 		return
 	}
 
-	err := newReport(source, target, s.LobbyId)
+	err = newReport(source, target, s.LobbyId)
+
 	if err != nil {
 		if _, ok := err.(repError); ok {
 			s.rcon.Say("!rep: Already reported")
 		} else {
-			say := fmt.Sprintf("!rep: Reporting system error: %s", err.Error())
-			s.rcon.Say(say)
+			s.rcon.Say(err.Error())
 			helpers.Logger.Errorf("#%d: %v", s.LobbyId, err)
 		}
 		return
 	}
 
 	curReps := countReports(target, s.LobbyId)
-
 	name := database.GetNameFromSteamID(target)
+
+	say := fmt.Sprintf("Got %d votes votes for reporting %s (%d needed)", curReps, name, repsNeeded[s.Type])
+	s.rcon.Say(say)
+
 	switch curReps {
 	case repsNeeded[s.Type]:
 		//Got needed number of reports, ask helen to substitute player
@@ -638,7 +643,7 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 		go func() {
 			select {
 			case <-ticker.C:
-				say := fmt.Sprintf("Reporting %s %s failed, couldn't get enough !rep in 1 minute.", team, argSlot)
+				say := fmt.Sprintf("Reporting %s %s failed, couldn't get enough voted in 1 minute.", team, argSlot)
 				s.rcon.Say(say)
 				ResetReportCount(target, s.LobbyId)
 			case <-stop:
@@ -649,9 +654,6 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 			delete(s.StopRepTimer, team+argSlot)
 		}()
 	}
-
-	say := fmt.Sprintf("Got %d votes votes for reporting player %s (%d needed)", curReps, name, repsNeeded[s.Type])
-	s.rcon.Say(say)
 
 	return
 }
