@@ -57,17 +57,29 @@ func GetTeam(lobbyID uint, lobbyType models.LobbyType, commID string) (team stri
 	return
 }
 
-func GetSteamIDFromSlot(team, class string, lobbyID uint, lobbyType models.LobbyType) (commID string) {
-	slot, _ := models.LobbyGetPlayerSlot(lobbyType, team, class)
-	err := db.QueryRow("SELECT players.steam_id FROM players INNER JOIN lobby_slots ON players.id = lobby_slots.player_id WHERE lobby_slots.lobby_id = $1 AND lobby_slots.slot = $2", lobbyID, slot).Scan(&commID)
+func GetSteamIDFromSlot(team, class string, lobbyID uint, lobbyType models.LobbyType) (string, error) {
+	slot, err := models.LobbyGetPlayerSlot(lobbyType, team, class)
 	if err != nil {
-		helpers.Logger.Error(err.Error())
+		return "", err
 	}
-	return
+
+	var playerid uint
+	err = db.QueryRow("SELECT player_id FROM lobby_slots WHERE lobby_id = $1 AND slot = $2", lobbyID, slot).Scan(&playerid)
+	if err != nil {
+		helpers.Logger.Errorf("#%d: Error while getting steamid for %s %s: %v", lobbyID, team, class, err)
+	}
+
+	var commID string
+	err = db.QueryRow("SELECT steam_id FROM players WHERE id = $1", playerid).Scan(&commID)
+	if err != nil {
+		helpers.Logger.Errorf("#%d: Error while getting steamid for %s %s: %v", lobbyID, team, class, err)
+	}
+
+	return commID, nil
 }
 
 func GetNameFromSteamID(commID string) (name string) {
-	err := db.QueryRow("SELECT name FROM player_slots WHERE steam_id = $1", commID).Scan(&name)
+	err := db.QueryRow("SELECT name FROM players WHERE steam_id = $1", commID).Scan(&name)
 	if err != nil {
 		helpers.Logger.Error(err.Error())
 	}
