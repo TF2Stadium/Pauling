@@ -24,7 +24,7 @@ func StartListener() {
 	var err error
 	ip := getlocalip()
 
-	listener, err = rcon.NewListenerAddr(config.Constants.LogsPort, ip+":"+config.Constants.LogsPort)
+	listener, err = rcon.NewListenerAddr(config.Constants.LogsPort, ip+":"+config.Constants.LogsPort, config.Constants.PrintLogMessages)
 
 	if err != nil {
 		helpers.Logger.Fatal(err)
