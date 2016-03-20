@@ -24,7 +24,7 @@ type repError struct {
 	target string
 }
 
-func (e repError) Error() string {
+func (e *repError) Error() string {
 	return fmt.Sprintf("%s has already repped %s", e.source, e.target)
 }
 
