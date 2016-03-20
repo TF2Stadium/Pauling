@@ -100,8 +100,8 @@ type Server struct {
 
 func NewServer() *Server {
 	s := &Server{
-		StopRepTimer: make(map[string]chan struct{}, 1),
-		StopVerifier: make(chan struct{}), 1,
+		StopRepTimer:  make(map[string]chan struct{}, 1),
+		StopVerifier:  make(chan struct{}, 1),
 		playerClasses: make(map[string]*classTime),
 	}
 
