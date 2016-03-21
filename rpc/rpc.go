@@ -58,6 +58,8 @@ func (Pauling) VerifyInfo(info *models.ServerRecord, nop *Noreply) error {
 		return errors.New("Couldn't connect to server")
 	}
 
+	rc.Query("log on")
+
 	if !server.Listener.TestSource(rc) {
 		return errors.New("Log redirection not working")
 	}
