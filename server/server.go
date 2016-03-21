@@ -118,11 +118,15 @@ func (s *Server) GetPlayers() ([]TF2RconWrapper.Player, error) {
 }
 
 func (s *Server) KickPlayer(commID string, reason string) {
-	steamID, _ := steamid.CommIdToSteamId(commID) //legacy steam id
+	steamID, _ := steamid.CommIdToSteamId(commID) //convert community id to steam id
 
-	players, _ := s.rcon.GetPlayers()
+	players, err := s.rcon.GetPlayers()
+	if err != nil {
+		helpers.Logger.Errorf("%v", err)
+	}
+
 	for _, player := range players {
-		if player.SteamID == steamID {
+		if steamid.SteamIDsEqual(steamID, player.SteamID) {
 			s.rcon.KickPlayer(player, reason)
 		}
 	}
@@ -602,7 +606,7 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 	err = newReport(source, target, s.LobbyId)
 
 	if err != nil {
-		if _, ok := err.(repError); ok {
+		if _, ok := err.(*repError); ok {
 			s.rcon.Say("!rep: Already reported")
 		} else {
 			s.rcon.Say(err.Error())
