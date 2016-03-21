@@ -9,7 +9,7 @@ import (
 	rcon "github.com/TF2Stadium/TF2RconWrapper"
 )
 
-var listener *rcon.Listener
+var Listener *rcon.Listener
 
 func getlocalip() string {
 	resp, err := http.Get("http://api.ipify.org")
@@ -24,7 +24,7 @@ func StartListener() {
 	var err error
 	ip := getlocalip()
 
-	listener, err = rcon.NewListenerAddr(config.Constants.LogsPort, ip+":"+config.Constants.LogsPort, config.Constants.PrintLogMessages)
+	Listener, err = rcon.NewListenerAddr(config.Constants.LogsPort, ip+":"+config.Constants.LogsPort, config.Constants.PrintLogMessages)
 
 	if err != nil {
 		helpers.Logger.Fatal(err)
