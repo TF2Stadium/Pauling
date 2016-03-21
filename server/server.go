@@ -397,6 +397,20 @@ func (s *Server) Setup() error {
 	}
 	f.Close()
 
+	helpers.Logger.Debugf("#%d: Creating listener", s.LobbyId)
+	eventlistener := &TF2RconWrapper.EventListener{
+		PlayerConnected:     s.PlayerConnected,
+		PlayerDisconnected:  s.PlayerDisconnected,
+		PlayerGlobalMessage: s.PlayerGlobalMessage,
+		GameOver:            s.GameOver,
+		CVarChange:          s.CVarChange,
+		PlayerClassChanged:  s.PlayerClassChanged,
+		TournamentStarted:   s.TournamentStarted,
+	}
+
+	s.source = listener.AddSource(eventlistener, s.rcon)
+	database.SetSecret(s.source.Secret, s.Info.ID)
+
 	// change map,
 	helpers.Logger.Debugf("#%d: Changing Map", s.LobbyId)
 	mapErr := s.rcon.ChangeMap(s.Map)
@@ -418,20 +432,6 @@ func (s *Server) Setup() error {
 	}
 
 	s.rcon.Query("tftrue_no_hats 0")
-
-	helpers.Logger.Debugf("#%d: Creating listener", s.LobbyId)
-	eventlistener := &TF2RconWrapper.EventListener{
-		PlayerConnected:     s.PlayerConnected,
-		PlayerDisconnected:  s.PlayerDisconnected,
-		PlayerGlobalMessage: s.PlayerGlobalMessage,
-		GameOver:            s.GameOver,
-		CVarChange:          s.CVarChange,
-		PlayerClassChanged:  s.PlayerClassChanged,
-		TournamentStarted:   s.TournamentStarted,
-	}
-
-	s.source = listener.AddSource(eventlistener, s.rcon)
-	database.SetSecret(s.source.Secret, s.Info.ID)
 
 	helpers.Logger.Debugf("#%d: Configured", s.LobbyId)
 	return nil
