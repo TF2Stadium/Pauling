@@ -34,7 +34,7 @@ func StartRPC(url string) {
 }
 
 func (Pauling) VerifyInfo(info *models.ServerRecord, nop *Noreply) error {
-	_, err := rconwrapper.NewTF2RconConnection(info.Host, info.RconPassword)
+	rc, err := rconwrapper.NewTF2RconConnection(info.Host, info.RconPassword)
 	if err != nil {
 		switch err.(type) {
 		case *net.OpError:
@@ -53,6 +53,10 @@ func (Pauling) VerifyInfo(info *models.ServerRecord, nop *Noreply) error {
 			}
 
 		}
+	}
+
+	if !server.Listener.TestSource(rc) {
+		return errors.New("Log redirection not working")
 	}
 
 	return nil
