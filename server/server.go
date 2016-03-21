@@ -147,28 +147,20 @@ func (s *Server) Say(text string) error {
 
 func (s *Server) StartVerifier(ticker *time.Ticker) {
 	var err error
-	var count int
 	defer DeleteServer(s.LobbyId)
 
 	_, err = s.rcon.Query("status")
 	if err != nil {
-		s.rcon.Close()
-		s.rcon, err = TF2RconWrapper.NewTF2RconConnection(s.Info.Host, s.Info.RconPassword)
-		for err != nil && count != 5 {
-			time.Sleep(1 * time.Second)
-			helpers.Logger.Critical(err.Error())
-			count++
-			s.rcon, err = TF2RconWrapper.NewTF2RconConnection(s.Info.Host, s.Info.RconPassword)
-		}
-		if count == 5 {
+		err = s.rcon.Reconnect(5 * time.Minute)
+
+		if err != nil {
 			publishEvent(Event{
 				Name:    DisconnectedFromServer,
 				LobbyID: s.LobbyId})
-
-			listener.RemoveSource(s.source, s.rcon)
 			return
 		}
 	}
+
 	for {
 		select {
 		case <-ticker.C:
@@ -427,27 +419,16 @@ func (s *Server) Setup() error {
 		return mapErr
 	}
 
-	time.Sleep(5 * time.Second)
-	helpers.Logger.Debugf("#%d: Executing config.", s.LobbyId)
+	err = s.rcon.Reconnect(1 * time.Minute)
+	if err != nil {
+		return err
+	}
 	s.rcon.AddTag("TF2Stadium")
+	helpers.Logger.Debugf("#%d: Executing config.", s.LobbyId)
 	err = s.ExecConfig()
 	if err != nil { // retry connection
-		var count int
-		helpers.Logger.Errorf("#%d: %v", s.LobbyId, err)
-
-		s.rcon.Close()
-		s.rcon, err = TF2RconWrapper.NewTF2RconConnection(s.Info.Host, s.Info.RconPassword)
-		for err != nil && count != 5 {
-			time.Sleep(1 * time.Second)
-			count++
-			s.rcon, err = TF2RconWrapper.NewTF2RconConnection(s.Info.Host, s.Info.RconPassword)
-		}
-		if count == 5 {
-			helpers.Logger.Errorf("#%d: %s", s.LobbyId, err.Error())
-			return err
-		}
-
-		s.ExecConfig()
+		s.rcon.RemoveTag("TF2Stadium")
+		return err
 	}
 
 	s.rcon.Query("tftrue_no_hats 0")
@@ -459,7 +440,7 @@ func (s *Server) Setup() error {
 func (s *Server) ExecConfig() error {
 	var err error
 
-	configPath, err := ConfigName(s.Map, s.Type, s.League)
+	leagueConfigPath, err := ConfigName(s.Map, s.Type, s.League)
 	if err != nil {
 		return err
 	}
@@ -477,8 +458,7 @@ func (s *Server) ExecConfig() error {
 	if err != nil {
 		return err
 	}
-
-	err = ExecFile(configPath, s.rcon)
+	err = ExecFile(leagueConfigPath, s.rcon)
 
 	if s.Type != models.LobbyTypeDebug {
 		err = ExecFile("after_format.cfg", s.rcon)
@@ -501,19 +481,14 @@ func (s *Server) Verify() bool {
 	}
 
 	err = s.rcon.ChangeServerPassword(s.Info.ServerPassword)
-	retries := 0
-	for err != nil { //TODO: Stop connection after x retries
-		if retries == 6 {
-			//Logger.Warning("#%d: Couldn't query %s after 5 retries", s.LobbyId, s.Info.Host)
+	if err != nil {
+		err = s.rcon.Reconnect(5 * time.Minute)
+		if err != nil {
 			publishEvent(Event{
 				Name:    DisconnectedFromServer,
 				LobbyID: s.LobbyId})
-
-			return false
 		}
-		retries++
-		time.Sleep(time.Second)
-		err = s.rcon.ChangeServerPassword(s.Info.ServerPassword)
+
 	}
 
 	return true
