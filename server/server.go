@@ -117,7 +117,7 @@ func (s *Server) GetPlayers() ([]TF2RconWrapper.Player, error) {
 	return s.rcon.GetPlayers()
 }
 
-func (s *Server) KickPlayer(commID string, reason string) {
+func (s *Server) KickPlayer(commID string, reason string) error {
 	steamID, _ := steamid.CommIdToSteamId(commID) //convert community id to steam id
 
 	players, err := s.rcon.GetPlayers()
@@ -127,9 +127,11 @@ func (s *Server) KickPlayer(commID string, reason string) {
 
 	for _, player := range players {
 		if steamid.SteamIDsEqual(steamID, player.SteamID) {
-			s.rcon.KickPlayer(player, reason)
+			return s.rcon.KickPlayer(player, reason)
 		}
 	}
+
+	return nil
 }
 
 func (s *Server) Say(text string) error {
