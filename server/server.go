@@ -109,7 +109,7 @@ func NewServer() *Server {
 }
 
 func (s *Server) StopListening() {
-	listener.RemoveSource(s.source, s.rcon)
+	Listener.RemoveSource(s.source, s.rcon)
 	s.StopVerifier <- struct{}{}
 }
 
@@ -408,7 +408,7 @@ func (s *Server) Setup() error {
 		TournamentStarted:   s.TournamentStarted,
 	}
 
-	s.source = listener.AddSource(eventlistener, s.rcon)
+	s.source = Listener.AddSource(eventlistener, s.rcon)
 	database.SetSecret(s.source.Secret, s.Info.ID)
 
 	// change map,
