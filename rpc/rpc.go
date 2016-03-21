@@ -120,7 +120,7 @@ func (Pauling) DisallowPlayer(args *models.Args, nop *Noreply) error {
 	steamID, _ := steamid.CommIdToSteamId(args.SteamId) //legacy steam id
 	server.ResetReportCount(steamID, args.Id)
 
-	err := s.KickPlayer(args.SteamId, "[tf2stadium.com] You have been replaced.")
+	err = s.KickPlayer(args.SteamId, "[tf2stadium.com] You have been replaced.")
 	for err != nil {
 		err = s.KickPlayer(args.SteamId, "[tf2stadium.com] You have been replaced.")
 	}
