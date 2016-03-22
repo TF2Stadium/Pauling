@@ -5,6 +5,7 @@ import (
 
 	"github.com/TF2Stadium/Pauling/config"
 	"github.com/TF2Stadium/Pauling/helpers"
+	"github.com/TF2Stadium/TF2RconWrapper"
 	"github.com/streadway/amqp"
 )
 
@@ -22,8 +23,9 @@ type Event struct {
 	LobbyID    uint
 	LogsID     int //logs.tf ID
 	ClassTimes map[string]*classTime
+	Players    []TF2RconWrapper.Player
 
-	Self bool // true if
+	Self bool // true if player has repped themselves
 }
 
 const (
@@ -35,6 +37,8 @@ const (
 	DisconnectedFromServer string = "discFromServer"
 	MatchEnded             string = "matchEnded"
 	Test                   string = "test"
+
+	PlayersList string = "playersList"
 )
 
 func connectMQ() {
@@ -66,7 +70,7 @@ func connectMQ() {
 	helpers.Logger.Info("Sending events on queue %s on %s", config.Constants.RabbitMQQueue, config.Constants.RabbitMQURL)
 }
 
-func publishEvent(e Event) {
+func publishEvent(e event) {
 	bytes, _ := json.Marshal(e)
 	channel.Publish(
 		"",
