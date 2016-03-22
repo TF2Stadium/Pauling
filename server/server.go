@@ -496,6 +496,12 @@ func (s *Server) Verify() bool {
 
 	}
 
+	players, _ := s.rcon.GetPlayers()
+	publishEvent(Event{
+		Name:    "playersList",
+		Players: players,
+	})
+
 	return true
 }
 
