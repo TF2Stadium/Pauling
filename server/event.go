@@ -70,7 +70,7 @@ func connectMQ() {
 	helpers.Logger.Info("Sending events on queue %s on %s", config.Constants.RabbitMQQueue, config.Constants.RabbitMQURL)
 }
 
-func publishEvent(e event) {
+func publishEvent(e Event) {
 	bytes, _ := json.Marshal(e)
 	channel.Publish(
 		"",
