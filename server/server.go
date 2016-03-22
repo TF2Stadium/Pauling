@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/TF2Stadium/Helen/models"
@@ -54,7 +55,8 @@ type Server struct {
 
 	LobbyId uint
 
-	StopRepTimer map[string]chan struct{}
+	mapMu        *sync.RWMutex
+	stopRepTimer map[string]chan struct{}
 	StopVerifier chan struct{}
 
 	source *TF2RconWrapper.Source
@@ -100,7 +102,8 @@ type Server struct {
 
 func NewServer() *Server {
 	s := &Server{
-		StopRepTimer:  make(map[string]chan struct{}, 1),
+		mapMu:         new(sync.RWMutex),
+		stopRepTimer:  make(map[string]chan struct{}, 1),
 		StopVerifier:  make(chan struct{}, 1),
 		playerClasses: make(map[string]*classTime),
 	}
@@ -611,7 +614,11 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 		// tell timeout goroutine to stop (It is possible that the map
 		// entry will not exist if only 1 report is needed (such as debug
 		// lobbies))
-		if c, ok := s.StopRepTimer[team+argSlot]; ok {
+		s.mapMu.RLock()
+		c, ok := s.stopRepTimer[team+argSlot]
+		s.mapMu.RUnlock()
+
+		if ok {
 			c <- struct{}{}
 		}
 
@@ -619,12 +626,15 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 		//first report happened, reset reps one minute later to 0, unless told to stop
 		ticker := time.NewTicker(1 * time.Minute)
 		stop := make(chan struct{})
-		s.StopRepTimer[team+argSlot] = stop
+
+		s.mapMu.Lock()
+		s.stopRepTimer[team+argSlot] = stop
+		s.mapMu.Unlock()
 
 		go func() {
 			select {
 			case <-ticker.C:
-				say := fmt.Sprintf("Reporting %s %s failed, couldn't get enough voted in 1 minute.", team, argSlot)
+				say := fmt.Sprintf("Reporting %s %s failed, couldn't get enough votes in 1 minute.", strings.ToUpper(team), strings.ToUpper(argSlot))
 				s.rcon.Say(say)
 				ResetReportCount(target, s.LobbyId)
 			case <-stop:
@@ -632,7 +642,9 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 			}
 			//once a sub is found, the report count will be reset with
 			//the rpc's DisallowPlayer method
-			delete(s.StopRepTimer, team+argSlot)
+			s.mapMu.Lock()
+			delete(s.stopRepTimer, team+argSlot)
+			s.mapMu.Unlock()
 		}()
 	}
 
