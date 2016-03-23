@@ -424,14 +424,14 @@ func (s *Server) Setup() error {
 		return mapErr
 	}
 
-	err = s.rcon.Reconnect(1 * time.Minute)
+	err = s.rcon.Reconnect(2 * time.Minute)
 	if err != nil {
 		return err
 	}
 	s.rcon.AddTag("TF2Stadium")
 	helpers.Logger.Debugf("#%d: Executing config.", s.LobbyId)
-	err = s.ExecConfig()
-	if err != nil { // retry connection
+	err = s.execConfig()
+	if err != nil {
 		s.rcon.RemoveTag("TF2Stadium")
 		return err
 	}
@@ -442,7 +442,13 @@ func (s *Server) Setup() error {
 	return nil
 }
 
-func (s *Server) ExecConfig() error {
+func (s *Server) Reset() {
+	s.rcon.ChangeMap(s.Map)
+	s.rcon.Reconnect(2 * time.Minute)
+	s.execConfig()
+}
+
+func (s *Server) execConfig() error {
 	var err error
 
 	leagueConfigPath, err := ConfigName(s.Map, s.Type, s.League)
