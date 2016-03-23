@@ -69,37 +69,6 @@ type Server struct {
 	playerClasses map[string]*classTime //steamID -> playerClasse
 }
 
-// func SetupServers() {
-// 	helpers.Logger.Debug("Setting up servers")
-// 	records := helen.GetServers()
-// 	for id, record := range records {
-// 		server := NewServer()
-// 		server.Info = *record
-// 		var count int
-// 		var err error
-
-// 		server.Rcon, err = TF2RconWrapper.NewTF2RconConnection(record.Host, record.RconPassword)
-// 		for err != nil {
-// 			time.Sleep(1 * time.Second)
-// 			helpers.Logger.Critical(err.Error())
-// 			count++
-// 			if count == 5 {
-// 				publishEvent(event.Event{
-// 					Name:    event.DisconnectedFromServer,
-// 					LobbyID: server.LobbyId})
-// 				return
-// 			}
-// 			server.Rcon, err = TF2RconWrapper.NewTF2RconConnection(record.Host, record.RconPassword)
-// 		}
-
-// 		SetServer(id, server)
-
-// 		go server.StartVerifier(time.NewTicker(10 * time.Second))
-
-// 		server.Source = listener.AddSourceSecret(record.LogSecret, server, server.Rcon)
-// 	}
-// }
-
 func NewServer() *Server {
 	s := &Server{
 		mapMu:         new(sync.RWMutex),
@@ -217,6 +186,15 @@ var classes = map[string]int{
 	"spy":          spy,
 	"medic":        medic,
 	"sniper":       sniper,
+}
+
+func (s *Server) RconCommand(_, command string) {
+	if strings.Contains(command, `Reservation ended, every player can download the STV demo at`) {
+		s.StopListening()
+		publishEvent(Event{
+			Name:    ReservationOver,
+			LobbyID: s.LobbyId})
+	}
 }
 
 func (s *Server) PlayerClassChanged(player TF2RconWrapper.PlayerData, class string) {
@@ -411,6 +389,7 @@ func (s *Server) Setup() error {
 		CVarChange:          s.CVarChange,
 		PlayerClassChanged:  s.PlayerClassChanged,
 		TournamentStarted:   s.TournamentStarted,
+		RconCommand:         s.RconCommand,
 	}
 
 	s.source = Listener.AddSource(eventlistener, s.rcon)
@@ -507,6 +486,8 @@ func (s *Server) Verify() bool {
 		Name:    "playersList",
 		Players: players,
 	})
+
+	s.rcon.QueryNoResp("sv_logsecret " + s.source.Secret + "; logaddress_add " + externalIP + ":" + config.Constants.LogsPort)
 
 	return true
 }
