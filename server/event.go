@@ -37,6 +37,7 @@ const (
 	DisconnectedFromServer string = "discFromServer"
 	MatchEnded             string = "matchEnded"
 	Test                   string = "test"
+	ReservationOver        string = "reservationOver"
 
 	PlayersList string = "playersList"
 )
