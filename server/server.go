@@ -517,10 +517,10 @@ var (
 	stopRepTimeout = make(map[uint](chan struct{}))
 
 	repsNeeded = map[models.LobbyType]int{
-		models.LobbyTypeSixes:      7,
+		models.LobbyTypeSixes:      5,
 		models.LobbyTypeDebug:      2,
-		models.LobbyTypeHighlander: 7,
-		models.LobbyTypeFours:      5,
+		models.LobbyTypeHighlander: 6,
+		models.LobbyTypeFours:      4,
 		models.LobbyTypeBball:      3,
 		models.LobbyTypeUltiduo:    3,
 	}
@@ -630,7 +630,7 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 
 	case 1:
 		//first report happened, reset reps one minute later to 0, unless told to stop
-		ticker := time.NewTicker(1 * time.Minute)
+		ticker := time.NewTicker(2 * time.Minute)
 		stop := make(chan struct{})
 
 		s.mapMu.Lock()
@@ -640,7 +640,7 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 		go func() {
 			select {
 			case <-ticker.C:
-				say := fmt.Sprintf("Reporting %s %s failed, couldn't get enough votes in 1 minute.", strings.ToUpper(team), strings.ToUpper(argSlot))
+				say := fmt.Sprintf("Reporting %s %s failed, couldn't get enough votes in 2 minute.", strings.ToUpper(team), strings.ToUpper(argSlot))
 				s.rcon.Say(say)
 				ResetReportCount(target, s.LobbyId)
 			case <-stop:
