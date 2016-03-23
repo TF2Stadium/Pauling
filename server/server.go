@@ -517,10 +517,10 @@ var (
 	stopRepTimeout = make(map[uint](chan struct{}))
 
 	repsNeeded = map[models.LobbyType]int{
-		models.LobbyTypeSixes:      7,
+		models.LobbyTypeSixes:      5,
 		models.LobbyTypeDebug:      2,
-		models.LobbyTypeHighlander: 7,
-		models.LobbyTypeFours:      5,
+		models.LobbyTypeHighlander: 6,
+		models.LobbyTypeFours:      4,
 		models.LobbyTypeBball:      3,
 		models.LobbyTypeUltiduo:    3,
 	}
