@@ -1,11 +1,8 @@
 package server
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
-	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
@@ -332,6 +329,46 @@ func (s *Server) Setup() error {
 		return kickErr
 	}
 
+	// change map,
+	helpers.Logger.Debugf("#%d: Changing Map", s.LobbyId)
+	mapErr := s.rcon.ChangeMap(s.Map)
+
+	if mapErr != nil {
+		return mapErr
+	}
+
+	err = s.rcon.Reconnect(2 * time.Minute)
+	if err != nil {
+		return err
+	}
+
+	helpers.Logger.Debugf("#%d: Creating listener", s.LobbyId)
+	eventlistener := &TF2RconWrapper.EventListener{
+		PlayerConnected:     s.PlayerConnected,
+		PlayerDisconnected:  s.PlayerDisconnected,
+		PlayerGlobalMessage: s.PlayerGlobalMessage,
+		GameOver:            s.GameOver,
+		CVarChange:          s.CVarChange,
+		PlayerClassChanged:  s.PlayerClassChanged,
+		TournamentStarted:   s.TournamentStarted,
+		RconCommand:         s.RconCommand,
+	}
+
+	s.source = Listener.AddSource(eventlistener, s.rcon)
+	database.SetSecret(s.source.Secret, s.Info.ID)
+
+	s.rcon.AddTag("TF2Stadium")
+
+	//execute config
+	helpers.Logger.Debugf("#%d: Executing config.", s.LobbyId)
+	err = s.execConfig()
+	if err != nil {
+		s.rcon.RemoveTag("TF2Stadium")
+		return err
+	}
+
+	s.rcon.Query("tftrue_no_hats 0")
+
 	helpers.Logger.Debugf("#%d: Setting whitelist", s.LobbyId)
 	// whitelist
 	_, err = s.rcon.Query(fmt.Sprintf("tftrue_whitelist_id %s", s.Whitelist))
@@ -366,57 +403,6 @@ func (s *Server) Setup() error {
 		s.rcon.Query("mp_tournament_whitelist " + whitelist)
 	}
 
-	name, err := ConfigName(s.Map, s.Type, s.League)
-	if err != nil {
-		return err
-	}
-
-	filePath, _ := filepath.Abs("./configs/" + name)
-
-	f, err := os.Open(filePath)
-	if err != nil {
-		//Logger.Debug("%s %s", filePath, err.Error())
-		return errors.New("Config doesn't exist.")
-	}
-	f.Close()
-
-	helpers.Logger.Debugf("#%d: Creating listener", s.LobbyId)
-	eventlistener := &TF2RconWrapper.EventListener{
-		PlayerConnected:     s.PlayerConnected,
-		PlayerDisconnected:  s.PlayerDisconnected,
-		PlayerGlobalMessage: s.PlayerGlobalMessage,
-		GameOver:            s.GameOver,
-		CVarChange:          s.CVarChange,
-		PlayerClassChanged:  s.PlayerClassChanged,
-		TournamentStarted:   s.TournamentStarted,
-		RconCommand:         s.RconCommand,
-	}
-
-	s.source = Listener.AddSource(eventlistener, s.rcon)
-	database.SetSecret(s.source.Secret, s.Info.ID)
-
-	// change map,
-	helpers.Logger.Debugf("#%d: Changing Map", s.LobbyId)
-	mapErr := s.rcon.ChangeMap(s.Map)
-
-	if mapErr != nil {
-		return mapErr
-	}
-
-	err = s.rcon.Reconnect(2 * time.Minute)
-	if err != nil {
-		return err
-	}
-	s.rcon.AddTag("TF2Stadium")
-	helpers.Logger.Debugf("#%d: Executing config.", s.LobbyId)
-	err = s.execConfig()
-	if err != nil {
-		s.rcon.RemoveTag("TF2Stadium")
-		return err
-	}
-
-	s.rcon.Query("tftrue_no_hats 0")
-
 	helpers.Logger.Debugf("#%d: Configured", s.LobbyId)
 	return nil
 }
@@ -435,8 +421,6 @@ func (s *Server) execConfig() error {
 		return err
 	}
 
-	formatConfigPath := FormatConfigName(s.Type)
-
 	if s.Type != models.LobbyTypeDebug {
 		err = ExecFile("base.cfg", s.rcon)
 		if err != nil {
@@ -444,6 +428,7 @@ func (s *Server) execConfig() error {
 		}
 	}
 
+	formatConfigPath := FormatConfigName(s.Type)
 	err = ExecFile(formatConfigPath, s.rcon)
 	if err != nil {
 		return err
