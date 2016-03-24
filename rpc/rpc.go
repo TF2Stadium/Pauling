@@ -93,8 +93,8 @@ func (Pauling) ReExecConfig(args *models.Args, nop *Noreply) error {
 		return err
 	}
 
-	err = s.ExecConfig()
-	return err
+	s.Reset()
+	return nil
 }
 
 func (Pauling) End(args *models.Args, nop *Noreply) error {

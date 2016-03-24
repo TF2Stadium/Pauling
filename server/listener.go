@@ -20,17 +20,18 @@ func getlocalip() string {
 	return string(bytes)
 }
 
+var externalIP = getlocalip()
+
 func StartListener() {
 	var err error
-	ip := getlocalip()
 
-	Listener, err = rcon.NewListenerAddr(config.Constants.LogsPort, ip+":"+config.Constants.LogsPort, config.Constants.PrintLogMessages)
+	Listener, err = rcon.NewListenerAddr(config.Constants.LogsPort, externalIP+":"+config.Constants.LogsPort, config.Constants.PrintLogMessages)
 
 	if err != nil {
 		helpers.Logger.Fatal(err)
 	}
 
-	helpers.Logger.Info("Listening for server messages on %s:%s", ip, config.Constants.LogsPort)
+	helpers.Logger.Info("Listening for server messages on %s:%s", externalIP, config.Constants.LogsPort)
 
 	connectMQ()
 }

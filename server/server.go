@@ -1,11 +1,8 @@
 package server
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
-	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
@@ -68,37 +65,6 @@ type Server struct {
 	// so we don't need to protect this map
 	playerClasses map[string]*classTime //steamID -> playerClasse
 }
-
-// func SetupServers() {
-// 	helpers.Logger.Debug("Setting up servers")
-// 	records := helen.GetServers()
-// 	for id, record := range records {
-// 		server := NewServer()
-// 		server.Info = *record
-// 		var count int
-// 		var err error
-
-// 		server.Rcon, err = TF2RconWrapper.NewTF2RconConnection(record.Host, record.RconPassword)
-// 		for err != nil {
-// 			time.Sleep(1 * time.Second)
-// 			helpers.Logger.Critical(err.Error())
-// 			count++
-// 			if count == 5 {
-// 				publishEvent(event.Event{
-// 					Name:    event.DisconnectedFromServer,
-// 					LobbyID: server.LobbyId})
-// 				return
-// 			}
-// 			server.Rcon, err = TF2RconWrapper.NewTF2RconConnection(record.Host, record.RconPassword)
-// 		}
-
-// 		SetServer(id, server)
-
-// 		go server.StartVerifier(time.NewTicker(10 * time.Second))
-
-// 		server.Source = listener.AddSourceSecret(record.LogSecret, server, server.Rcon)
-// 	}
-// }
 
 func NewServer() *Server {
 	s := &Server{
@@ -217,6 +183,15 @@ var classes = map[string]int{
 	"spy":          spy,
 	"medic":        medic,
 	"sniper":       sniper,
+}
+
+func (s *Server) RconCommand(_, command string) {
+	if strings.Contains(command, `Reservation ended, every player can download the STV demo at`) {
+		s.StopListening()
+		publishEvent(Event{
+			Name:    ReservationOver,
+			LobbyID: s.LobbyId})
+	}
 }
 
 func (s *Server) PlayerClassChanged(player TF2RconWrapper.PlayerData, class string) {
@@ -354,6 +329,46 @@ func (s *Server) Setup() error {
 		return kickErr
 	}
 
+	// change map,
+	helpers.Logger.Debugf("#%d: Changing Map", s.LobbyId)
+	mapErr := s.rcon.ChangeMap(s.Map)
+
+	if mapErr != nil {
+		return mapErr
+	}
+
+	err = s.rcon.Reconnect(2 * time.Minute)
+	if err != nil {
+		return err
+	}
+
+	helpers.Logger.Debugf("#%d: Creating listener", s.LobbyId)
+	eventlistener := &TF2RconWrapper.EventListener{
+		PlayerConnected:     s.PlayerConnected,
+		PlayerDisconnected:  s.PlayerDisconnected,
+		PlayerGlobalMessage: s.PlayerGlobalMessage,
+		GameOver:            s.GameOver,
+		CVarChange:          s.CVarChange,
+		PlayerClassChanged:  s.PlayerClassChanged,
+		TournamentStarted:   s.TournamentStarted,
+		RconCommand:         s.RconCommand,
+	}
+
+	s.source = Listener.AddSource(eventlistener, s.rcon)
+	database.SetSecret(s.source.Secret, s.Info.ID)
+
+	s.rcon.AddTag("TF2Stadium")
+
+	//execute config
+	helpers.Logger.Debugf("#%d: Executing config.", s.LobbyId)
+	err = s.execConfig()
+	if err != nil {
+		s.rcon.RemoveTag("TF2Stadium")
+		return err
+	}
+
+	s.rcon.Query("tftrue_no_hats 0")
+
 	helpers.Logger.Debugf("#%d: Setting whitelist", s.LobbyId)
 	// whitelist
 	_, err = s.rcon.Query(fmt.Sprintf("tftrue_whitelist_id %s", s.Whitelist))
@@ -388,69 +403,23 @@ func (s *Server) Setup() error {
 		s.rcon.Query("mp_tournament_whitelist " + whitelist)
 	}
 
-	name, err := ConfigName(s.Map, s.Type, s.League)
-	if err != nil {
-		return err
-	}
-
-	filePath, _ := filepath.Abs("./configs/" + name)
-
-	f, err := os.Open(filePath)
-	if err != nil {
-		//Logger.Debug("%s %s", filePath, err.Error())
-		return errors.New("Config doesn't exist.")
-	}
-	f.Close()
-
-	helpers.Logger.Debugf("#%d: Creating listener", s.LobbyId)
-	eventlistener := &TF2RconWrapper.EventListener{
-		PlayerConnected:     s.PlayerConnected,
-		PlayerDisconnected:  s.PlayerDisconnected,
-		PlayerGlobalMessage: s.PlayerGlobalMessage,
-		GameOver:            s.GameOver,
-		CVarChange:          s.CVarChange,
-		PlayerClassChanged:  s.PlayerClassChanged,
-		TournamentStarted:   s.TournamentStarted,
-	}
-
-	s.source = Listener.AddSource(eventlistener, s.rcon)
-	database.SetSecret(s.source.Secret, s.Info.ID)
-
-	// change map,
-	helpers.Logger.Debugf("#%d: Changing Map", s.LobbyId)
-	mapErr := s.rcon.ChangeMap(s.Map)
-
-	if mapErr != nil {
-		return mapErr
-	}
-
-	err = s.rcon.Reconnect(1 * time.Minute)
-	if err != nil {
-		return err
-	}
-	s.rcon.AddTag("TF2Stadium")
-	helpers.Logger.Debugf("#%d: Executing config.", s.LobbyId)
-	err = s.ExecConfig()
-	if err != nil { // retry connection
-		s.rcon.RemoveTag("TF2Stadium")
-		return err
-	}
-
-	s.rcon.Query("tftrue_no_hats 0")
-
 	helpers.Logger.Debugf("#%d: Configured", s.LobbyId)
 	return nil
 }
 
-func (s *Server) ExecConfig() error {
+func (s *Server) Reset() {
+	s.rcon.ChangeMap(s.Map)
+	s.rcon.Reconnect(2 * time.Minute)
+	s.execConfig()
+}
+
+func (s *Server) execConfig() error {
 	var err error
 
 	leagueConfigPath, err := ConfigName(s.Map, s.Type, s.League)
 	if err != nil {
 		return err
 	}
-
-	formatConfigPath := FormatConfigName(s.Type)
 
 	if s.Type != models.LobbyTypeDebug {
 		err = ExecFile("base.cfg", s.rcon)
@@ -459,6 +428,7 @@ func (s *Server) ExecConfig() error {
 		}
 	}
 
+	formatConfigPath := FormatConfigName(s.Type)
 	err = ExecFile(formatConfigPath, s.rcon)
 	if err != nil {
 		return err
@@ -502,6 +472,8 @@ func (s *Server) Verify() bool {
 		Players: players,
 	})
 
+	s.rcon.QueryNoResp("sv_logsecret " + s.source.Secret + "; logaddress_add " + externalIP + ":" + config.Constants.LogsPort)
+
 	return true
 }
 
@@ -517,10 +489,10 @@ var (
 	stopRepTimeout = make(map[uint](chan struct{}))
 
 	repsNeeded = map[models.LobbyType]int{
-		models.LobbyTypeSixes:      7,
+		models.LobbyTypeSixes:      5,
 		models.LobbyTypeDebug:      2,
-		models.LobbyTypeHighlander: 7,
-		models.LobbyTypeFours:      5,
+		models.LobbyTypeHighlander: 6,
+		models.LobbyTypeFours:      4,
 		models.LobbyTypeBball:      3,
 		models.LobbyTypeUltiduo:    3,
 	}
@@ -630,7 +602,7 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 
 	case 1:
 		//first report happened, reset reps one minute later to 0, unless told to stop
-		ticker := time.NewTicker(1 * time.Minute)
+		ticker := time.NewTicker(2 * time.Minute)
 		stop := make(chan struct{})
 
 		s.mapMu.Lock()
@@ -640,7 +612,7 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 		go func() {
 			select {
 			case <-ticker.C:
-				say := fmt.Sprintf("Reporting %s %s failed, couldn't get enough votes in 1 minute.", strings.ToUpper(team), strings.ToUpper(argSlot))
+				say := fmt.Sprintf("Reporting %s %s failed, couldn't get enough votes in 2 minute.", strings.ToUpper(team), strings.ToUpper(argSlot))
 				s.rcon.Say(say)
 				ResetReportCount(target, s.LobbyId)
 			case <-stop:
