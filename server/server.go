@@ -329,6 +329,7 @@ func (s *Server) Setup() error {
 		return kickErr
 	}
 
+	s.rcon.Query("mp_tournament_readymode 1")
 	// change map,
 	helpers.Logger.Debugf("#%d: Changing Map", s.LobbyId)
 	mapErr := s.rcon.ChangeMap(s.Map)
