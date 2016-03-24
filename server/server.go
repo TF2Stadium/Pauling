@@ -163,7 +163,10 @@ func (s *Server) PlayerConnected(data TF2RconWrapper.PlayerData) {
 		s.curplayers++
 		if s.curplayers == 2*models.NumberOfClassesMap[s.Type] {
 			ExecFile("soap_off.cfg", s.rcon)
+		} else if s.curplayers == 1 {
+			go s.execConfig()
 		}
+
 		_, ok := s.playerClasses[commID]
 		if !ok {
 			s.playerClasses[commID] = new(classTime)
@@ -329,7 +332,7 @@ func (s *Server) Setup() error {
 		return kickErr
 	}
 
-	s.rcon.Query("mp_tournament_readymode 1")
+	s.rcon.Query("mp_tournament 1; mp_tournament_readymode 1")
 	// change map,
 	helpers.Logger.Debugf("#%d: Changing Map", s.LobbyId)
 	mapErr := s.rcon.ChangeMap(s.Map)
