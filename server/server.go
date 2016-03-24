@@ -357,18 +357,6 @@ func (s *Server) Setup() error {
 	s.source = Listener.AddSource(eventlistener, s.rcon)
 	database.SetSecret(s.source.Secret, s.Info.ID)
 
-	s.rcon.AddTag("TF2Stadium")
-
-	//execute config
-	helpers.Logger.Debugf("#%d: Executing config.", s.LobbyId)
-	err = s.execConfig()
-	if err != nil {
-		s.rcon.RemoveTag("TF2Stadium")
-		return err
-	}
-
-	s.rcon.Query("tftrue_no_hats 0")
-
 	helpers.Logger.Debugf("#%d: Setting whitelist", s.LobbyId)
 	// whitelist
 	_, err = s.rcon.Query(fmt.Sprintf("tftrue_whitelist_id %s", s.Whitelist))
@@ -402,6 +390,18 @@ func (s *Server) Setup() error {
 		}
 		s.rcon.Query("mp_tournament_whitelist " + whitelist)
 	}
+
+	s.rcon.AddTag("TF2Stadium")
+
+	//execute config
+	helpers.Logger.Debugf("#%d: Executing config.", s.LobbyId)
+	err = s.execConfig()
+	if err != nil {
+		s.rcon.RemoveTag("TF2Stadium")
+		return err
+	}
+
+	s.rcon.Query("tftrue_no_hats 0")
 
 	helpers.Logger.Debugf("#%d: Configured", s.LobbyId)
 	return nil
