@@ -394,16 +394,7 @@ func (s *Server) Setup() error {
 	}
 
 	s.rcon.AddTag("TF2Stadium")
-
-	//execute config
-	helpers.Logger.Debugf("#%d: Executing config.", s.LobbyId)
-	err = s.execConfig()
-	if err != nil {
-		s.rcon.RemoveTag("TF2Stadium")
-		return err
-	}
-
-	s.rcon.Query("tftrue_no_hats 0")
+	s.rcon.Query("tftrue_no_hats 0; mp_timelimit 0; mp_tournament 1; mp_tournament_restart")
 
 	helpers.Logger.Debugf("#%d: Configured", s.LobbyId)
 	return nil
