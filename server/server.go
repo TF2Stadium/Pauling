@@ -163,8 +163,6 @@ func (s *Server) PlayerConnected(data TF2RconWrapper.PlayerData) {
 		s.curplayers++
 		if s.curplayers == 2*models.NumberOfClassesMap[s.Type] {
 			ExecFile("soap_off.cfg", s.rcon)
-		} else if s.curplayers == 1 {
-			go s.execConfig()
 		}
 
 		_, ok := s.playerClasses[commID]
@@ -411,9 +409,11 @@ func (s *Server) Setup() error {
 	return nil
 }
 
-func (s *Server) Reset() {
-	s.rcon.ChangeMap(s.Map)
-	s.rcon.Reconnect(2 * time.Minute)
+func (s *Server) Reset(changeMap bool) {
+	if changeMap {
+		s.rcon.ChangeMap(s.Map)
+		s.rcon.Reconnect(2 * time.Minute)
+	}
 	s.execConfig()
 }
 
