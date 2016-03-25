@@ -64,22 +64,17 @@ func ExecFile(path string, rcon *tf2rcon.TF2RconConnection) error {
 	}
 
 	lines := strings.Split(string(data), "\n")
-	config := ""
 
 	for _, line := range lines {
 		line = strings.TrimSpace(stripComments(line))
-
-		if len(config+line+"; ") >= 1000 {
-			_, err := rcon.Query(config)
-			if err != nil {
-				rcon.Reconnect(time.Second * 10)
-				if _, err = rcon.Query(config); err != nil {
-					return err
-				}
+		_, err := rcon.Query(line)
+		if err != nil {
+			rcon.Reconnect(time.Second * 10)
+			if _, err = rcon.Query(line); err != nil {
+				return err
 			}
-			config = ""
 		}
-		config += line + "; "
+
 	}
 	return nil
 
