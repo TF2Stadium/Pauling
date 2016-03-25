@@ -93,7 +93,7 @@ func (Pauling) ReExecConfig(args *models.Args, nop *Noreply) error {
 		return err
 	}
 
-	s.Reset()
+	s.Reset(args.ChangeMap)
 	return nil
 }
 
