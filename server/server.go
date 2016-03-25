@@ -333,11 +333,13 @@ func (s *Server) Setup() error {
 	s.rcon.Query("mp_tournament 1; mp_tournament_readymode 1")
 	// change map,
 	helpers.Logger.Debugf("#%d: Changing Map", s.LobbyId)
-	mapErr := s.rcon.ChangeMap(s.Map)
+	err = s.rcon.ChangeMap(s.Map)
 
-	if mapErr != nil {
-		return mapErr
+	if err != nil {
+		return err
 	}
+
+	time.Sleep(10 * time.Second) // wait for map to change
 
 	err = s.rcon.Reconnect(2 * time.Minute)
 	if err != nil {
