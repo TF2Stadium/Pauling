@@ -162,7 +162,7 @@ func (s *Server) PlayerConnected(data TF2RconWrapper.PlayerData) {
 		})
 		s.curplayers++
 		if s.curplayers == 2*models.NumberOfClassesMap[s.Type] {
-			ExecFile("soap_off.cfg", s.rcon)
+			go ExecFile("soap_off.cfg", s.rcon)
 		}
 
 		_, ok := s.playerClasses[commID]
@@ -188,10 +188,11 @@ var classes = map[string]int{
 
 func (s *Server) RconCommand(_, command string) {
 	if strings.Contains(command, `Reservation ended, every player can download the STV demo at`) {
-		s.StopListening()
 		publishEvent(Event{
 			Name:    ReservationOver,
 			LobbyID: s.LobbyId})
+
+		s.StopListening()
 	}
 }
 
@@ -261,7 +262,7 @@ func (s *Server) PlayerGlobalMessage(data TF2RconWrapper.PlayerData, text string
 		if rFirstSubArg.FindStringSubmatch(text) != nil {
 			// If they tried to use !sub with an argument, they
 			// probably meant to !rep
-			s.rcon.Say("!sub is for replacing yourself, !rep reports others.")
+			go s.rcon.Say("!sub is for replacing yourself, !rep reports others.")
 		} else {
 			commID, _ := steamid.SteamIdToCommId(data.SteamId)
 
@@ -273,10 +274,10 @@ func (s *Server) PlayerGlobalMessage(data TF2RconWrapper.PlayerData, text string
 
 			say := fmt.Sprintf("Reporting player %s (%s)",
 				data.Username, data.SteamId)
-			s.rcon.Say(say)
+			go s.rcon.Say(say)
 		}
 	} else if strings.HasPrefix(text, "!soapoff ") {
-		ExecFile("soap_off.cfg", s.rcon)
+		go ExecFile("soap_off.cfg", s.rcon)
 	}
 }
 
@@ -509,7 +510,7 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 
 	source, _ := steamid.SteamIdToCommId(data.SteamId)
 	if database.IsReported(s.LobbyId, source) {
-		s.rcon.Say("!rep: Player has already been reported.")
+		go s.rcon.Say("!rep: Player has already been reported.")
 		return
 	}
 
@@ -530,18 +531,31 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 	case "blue":
 		team = "blu"
 	default:
-		s.rcon.Say("Usage: !rep our/their/red/blu slotname")
+		go s.rcon.Say("Usage: !rep our/their/red/blu slotname")
 		return
 	}
 
 	target, err := database.GetSteamIDFromSlot(team, argSlot, s.LobbyId, s.Type)
 	if err != nil {
-		s.rcon.Say("!rep: Unknown or empty slot")
+		var slots string
+
+		switch s.Type {
+		case models.LobbyTypeSixes:
+			slots = "scout1/scout2/demoman/pocket/roamer/medic"
+		case models.LobbyTypeHighlander:
+			slots = "scout/soldier/pyro/demoman/heavy/engineer/medic/spy/sniper"
+		case models.LobbyTypeUltiduo:
+			slots = "soldier/medic"
+		case models.LobbyTypeBball:
+			slots = "soldier1/soldier2"
+		}
+
+		go s.rcon.Say("!rep: valid slots - " + slots)
 		return
 	}
 
 	if database.IsReported(s.LobbyId, target) {
-		s.rcon.Say("Player has already been reported")
+		go s.rcon.Say("Player has already been reported")
 		return
 	}
 
@@ -554,7 +568,7 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 			Self:    true})
 
 		say := fmt.Sprintf("Reporting player %s (%s)", data.Username, data.SteamId)
-		s.rcon.Say(say)
+		go s.rcon.Say(say)
 		return
 	}
 
@@ -562,9 +576,9 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 
 	if err != nil {
 		if _, ok := err.(*repError); ok {
-			s.rcon.Say("!rep: Already reported")
+			go s.rcon.Say("!rep: Already reported")
 		} else {
-			s.rcon.Say(err.Error())
+			go s.rcon.Say(err.Error())
 			helpers.Logger.Errorf("#%d: %v", s.LobbyId, err)
 		}
 		return
@@ -574,13 +588,13 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 	name := database.GetNameFromSteamID(target)
 
 	say := fmt.Sprintf("Got %d votes votes for reporting %s (%d needed)", curReps, name, repsNeeded[s.Type])
-	s.rcon.Say(say)
+	go s.rcon.Say(say)
 
 	switch curReps {
 	case repsNeeded[s.Type]:
 		//Got needed number of reports, ask helen to substitute player
 		say := fmt.Sprintf("Reporting %s %s: %s", team, argSlot, name)
-		s.rcon.Say(say)
+		go s.rcon.Say(say)
 		publishEvent(Event{
 			Name:    PlayerSubstituted,
 			SteamID: target,
@@ -610,7 +624,7 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 			select {
 			case <-ticker.C:
 				say := fmt.Sprintf("Reporting %s %s failed, couldn't get enough votes in 2 minute.", strings.ToUpper(team), strings.ToUpper(argSlot))
-				s.rcon.Say(say)
+				go s.rcon.Say(say)
 				ResetReportCount(target, s.LobbyId)
 			case <-stop:
 				return
