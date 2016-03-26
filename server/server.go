@@ -447,6 +447,15 @@ func (s *Server) execConfig() error {
 func (s *Server) Verify() bool {
 	//Logger.Debug("#%d: Verifying %s...", s.LobbyId, s.Info.Host)
 	password, err := s.rcon.GetServerPassword()
+
+	players, _ := s.rcon.GetPlayers()
+	publishEvent(Event{
+		Name:    "playersList",
+		Players: players,
+	})
+
+	s.rcon.QueryNoResp("sv_logsecret " + s.source.Secret + "; logaddress_add " + externalIP + ":" + config.Constants.LogsPort)
+
 	if err == nil {
 		if password == s.Info.ServerPassword {
 			return true
@@ -463,14 +472,6 @@ func (s *Server) Verify() bool {
 		}
 
 	}
-
-	players, _ := s.rcon.GetPlayers()
-	publishEvent(Event{
-		Name:    "playersList",
-		Players: players,
-	})
-
-	s.rcon.QueryNoResp("sv_logsecret " + s.source.Secret + "; logaddress_add " + externalIP + ":" + config.Constants.LogsPort)
 
 	return true
 }
