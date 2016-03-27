@@ -6,6 +6,8 @@ import (
 	"errors"
 	"mime/multipart"
 	"net/http"
+	"runtime"
+	"time"
 
 	"github.com/TF2Stadium/Pauling/config"
 )
@@ -19,6 +21,10 @@ type response struct {
 	Error   string `json:"error,omitempty"`
 	LogID   int    `json:"log_id,omitempty"`
 	Success bool   `json:"success"`
+}
+
+var client = http.Client{
+	Timeout: 10 * time.Second,
 }
 
 func Upload(title, mapName string, logs *bytes.Buffer) (int, error) {
@@ -44,9 +50,9 @@ func Upload(title, mapName string, logs *bytes.Buffer) (int, error) {
 
 	req, err := http.NewRequest("POST", "http://logs.tf/upload", body)
 	req.Header.Add("Content-Type", writer.FormDataContentType())
-	req.Header.Add("User-Agent", "go version go1.5.3 linux/amd64")
+	req.Header.Add("User-Agent", runtime.Version())
 
-	re, err := http.DefaultClient.Do(req)
+	re, err := client.Do(req)
 	if err != nil {
 		return 0, err
 	}
