@@ -406,9 +406,6 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 	curReps := countReports(target, s.LobbyId)
 	name := database.GetNameFromSteamID(target)
 
-	say := fmt.Sprintf("Got %d votes votes for reporting %s (%d needed)", curReps, name, repsNeeded[s.Type])
-	s.rcon.Say(say)
-
 	switch curReps {
 	case repsNeeded[s.Type]:
 		//Got needed number of reports, ask helen to substitute player
@@ -435,10 +432,10 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 		s.rcon.Say(say)
 
 	case 1:
-		//first report happened, reset reps one minute later to 0, unless told to stop
+		//first report happened, reset reps two minute later to 0, unless told to stop
 		timer := time.AfterFunc(2*time.Minute, func() {
-			say := fmt.Sprintf("Reporting %s %s failed, couldn't get enough votes in 2 minute.", strings.ToUpper(team), strings.ToUpper(argSlot))
 			ResetReportCount(target, s.LobbyId)
+			say := fmt.Sprintf("Reporting %s %s failed, couldn't get enough votes in 2 minutes.", strings.ToUpper(team), strings.ToUpper(argSlot))
 			s.rcon.Say(say)
 
 		})
@@ -446,6 +443,9 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 		s.mapMu.Lock()
 		s.repTimer[team+argSlot] = timer
 		s.mapMu.Unlock()
+	default:
+		say := fmt.Sprintf("Got %d votes for reporting %s (%d needed)", curReps, name, repsNeeded[s.Type])
+		s.rcon.Say(say)
 	}
 
 	return
