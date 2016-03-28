@@ -2,7 +2,6 @@ package server
 
 import (
 	"fmt"
-	"io/ioutil"
 	"regexp"
 	"strings"
 	"sync"
@@ -12,7 +11,6 @@ import (
 	"github.com/TF2Stadium/Pauling/config"
 	"github.com/TF2Stadium/Pauling/database"
 	"github.com/TF2Stadium/Pauling/helpers"
-	"github.com/TF2Stadium/Pauling/server/logs"
 	"github.com/TF2Stadium/PlayerStatsScraper/steamid"
 	"github.com/TF2Stadium/TF2RconWrapper"
 )
@@ -29,21 +27,6 @@ const (
 	spy
 )
 
-type classTime struct {
-	current     int // current class being played
-	lastChanged time.Time
-
-	Scout    time.Duration
-	Soldier  time.Duration
-	Pyro     time.Duration
-	Demoman  time.Duration
-	Heavy    time.Duration
-	Engineer time.Duration
-	Sniper   time.Duration
-	Medic    time.Duration
-	Spy      time.Duration
-}
-
 type Server struct {
 	Map       string // lobby map
 	League    string
@@ -53,25 +36,28 @@ type Server struct {
 	LobbyId uint
 
 	mapMu        *sync.RWMutex
-	stopRepTimer map[string]chan struct{}
+	repTimer     map[string]*time.Timer
 	StopVerifier chan struct{}
 
 	source *TF2RconWrapper.Source
 	rcon   *TF2RconWrapper.TF2RconConnection
 	Info   models.ServerRecord
 
-	curplayers int
-	// handlers are called synchronously for each server,
-	// so we don't need to protect this map
-	playerClasses map[string]*classTime //steamID -> playerClasse
+	curplayers      *int32
+	playerClassesMu *sync.RWMutex
+	playerClasses   map[string]*classTime //steamID -> playerClasse
+
+	ended *int32
 }
 
 func NewServer() *Server {
 	s := &Server{
 		mapMu:         new(sync.RWMutex),
-		stopRepTimer:  make(map[string]chan struct{}, 1),
+		repTimer:      make(map[string]*time.Timer, 1),
 		StopVerifier:  make(chan struct{}, 1),
 		playerClasses: make(map[string]*classTime),
+		curplayers:    new(int32),
+		ended:         new(int32),
 	}
 
 	return s
@@ -151,167 +137,6 @@ func (s *Server) StartVerifier(ticker *time.Ticker) {
 	}
 }
 
-func (s *Server) PlayerConnected(data TF2RconWrapper.PlayerData) {
-	commID, _ := steamid.SteamIdToCommId(data.SteamId)
-	allowed, reason := database.IsAllowed(s.LobbyId, commID)
-	if allowed {
-		publishEvent(Event{
-			Name:    PlayerConnected,
-			LobbyID: s.LobbyId,
-			SteamID: commID,
-		})
-		s.curplayers++
-		if s.curplayers == 2*models.NumberOfClassesMap[s.Type] {
-			ExecFile("soap_off.cfg", s.rcon)
-		}
-		_, ok := s.playerClasses[commID]
-		if !ok {
-			s.playerClasses[commID] = new(classTime)
-		}
-	} else {
-		s.rcon.KickPlayerID(data.UserId, "[tf2stadium.com] "+reason)
-	}
-}
-
-var classes = map[string]int{
-	"scout":        scout,
-	"soldier":      soldier,
-	"pyro":         pyro,
-	"engineer":     engineer,
-	"heavyweapons": heavy,
-	"demoman":      demoman,
-	"spy":          spy,
-	"medic":        medic,
-	"sniper":       sniper,
-}
-
-func (s *Server) RconCommand(_, command string) {
-	if strings.Contains(command, `Reservation ended, every player can download the STV demo at`) {
-		s.StopListening()
-		publishEvent(Event{
-			Name:    ReservationOver,
-			LobbyID: s.LobbyId})
-	}
-}
-
-func (s *Server) PlayerClassChanged(player TF2RconWrapper.PlayerData, class string) {
-	commID, _ := steamid.SteamIdToCommId(player.SteamId)
-	classtime, ok := s.playerClasses[commID]
-	if !ok { //shouldn't happen, map entry for every player is created when they connect
-		helpers.Logger.Errorf("No map entry for %s found", commID)
-		return
-	}
-
-	if classtime.lastChanged.IsZero() {
-		classtime.current = classes[class]
-		classtime.lastChanged = time.Now()
-		return
-	}
-
-	var prev *time.Duration // previous class
-
-	switch classtime.current {
-	case scout:
-		prev = &classtime.Scout
-	case soldier:
-		prev = &classtime.Soldier
-	case pyro:
-		prev = &classtime.Pyro
-	case demoman:
-		prev = &classtime.Demoman
-	case heavy:
-		prev = &classtime.Heavy
-	case engineer:
-		prev = &classtime.Engineer
-	case sniper:
-		prev = &classtime.Sniper
-	case medic:
-		prev = &classtime.Medic
-	case spy:
-		prev = &classtime.Spy
-	}
-
-	*prev += time.Since(classtime.lastChanged)
-	classtime.current = classes[class]
-	classtime.lastChanged = time.Now()
-}
-
-func (s *Server) PlayerDisconnected(data TF2RconWrapper.PlayerData) {
-	commID, _ := steamid.SteamIdToCommId(data.SteamId)
-	allowed, _ := database.IsAllowed(s.LobbyId, commID)
-	if allowed {
-		publishEvent(Event{
-			Name:    PlayerDisconnected,
-			LobbyID: s.LobbyId,
-			SteamID: commID})
-	}
-}
-
-func (s *Server) TournamentStarted() {
-	ExecFile("soap_off.cfg", s.rcon)
-}
-
-func (s *Server) PlayerGlobalMessage(data TF2RconWrapper.PlayerData, text string) {
-	//Logger.Debug("GLOBAL %s:", text)
-
-	if strings.HasPrefix(text, "!rep") {
-		s.report(data)
-	} else if strings.HasPrefix(text, "!sub") {
-		if rFirstSubArg.FindStringSubmatch(text) != nil {
-			// If they tried to use !sub with an argument, they
-			// probably meant to !rep
-			s.rcon.Say("!sub is for replacing yourself, !rep reports others.")
-		} else {
-			commID, _ := steamid.SteamIdToCommId(data.SteamId)
-
-			publishEvent(Event{
-				Name:    PlayerSubstituted,
-				LobbyID: s.LobbyId,
-				SteamID: commID,
-				Self:    true})
-
-			say := fmt.Sprintf("Reporting player %s (%s)",
-				data.Username, data.SteamId)
-			s.rcon.Say(say)
-		}
-	} else if strings.HasPrefix(text, "!soapoff ") {
-		ExecFile("soap_off.cfg", s.rcon)
-	}
-}
-
-func (s *Server) GameOver() {
-	s.StopListening()
-	logsBuff := s.source.Logs()
-	logsBuff.WriteString("L " + time.Now().Format(TF2RconWrapper.TimeFormat) + ": Log file closed.\n")
-
-	if config.Constants.LogsTFAPIKey == "" {
-		helpers.Logger.Debug("No logs.tf API key, writing logs to file")
-		ioutil.WriteFile(fmt.Sprintf("%d.log", s.LobbyId), logsBuff.Bytes(), 0666)
-	}
-
-	logID, err := logs.Upload(fmt.Sprintf("TF2Stadium Lobby #%d", s.LobbyId), s.Map, logsBuff)
-	if err != nil {
-		helpers.Logger.Warningf("%d: %s", s.LobbyId, err.Error())
-		ioutil.WriteFile(fmt.Sprintf("%d.log", s.LobbyId), logsBuff.Bytes(), 0666)
-	}
-	publishEvent(Event{
-		Name:       MatchEnded,
-		LobbyID:    s.LobbyId,
-		LogsID:     logID,
-		ClassTimes: s.playerClasses})
-	return
-}
-
-func (s *Server) CVarChange(variable string, value string) {
-	if variable == "sv_password" {
-		// ServerCvar includes the new variable value--but for
-		// sv_password it is ***PROTECTED***
-		if value != s.Info.ServerPassword {
-			s.rcon.ChangeServerPassword(s.Info.ServerPassword)
-		}
-	}
-}
-
 func (s *Server) Setup() error {
 	helpers.Logger.Debugf("#%d: Connecting to %s", s.LobbyId, s.Info.Host)
 
@@ -329,13 +154,16 @@ func (s *Server) Setup() error {
 		return kickErr
 	}
 
+	s.rcon.Query("mp_tournament 1; mp_tournament_readymode 1")
 	// change map,
 	helpers.Logger.Debugf("#%d: Changing Map", s.LobbyId)
-	mapErr := s.rcon.ChangeMap(s.Map)
+	err = s.rcon.ChangeMap(s.Map)
 
-	if mapErr != nil {
-		return mapErr
+	if err != nil {
+		return err
 	}
+
+	time.Sleep(10 * time.Second) // wait for map to change
 
 	err = s.rcon.Reconnect(2 * time.Minute)
 	if err != nil {
@@ -356,18 +184,6 @@ func (s *Server) Setup() error {
 
 	s.source = Listener.AddSource(eventlistener, s.rcon)
 	database.SetSecret(s.source.Secret, s.Info.ID)
-
-	s.rcon.AddTag("TF2Stadium")
-
-	//execute config
-	helpers.Logger.Debugf("#%d: Executing config.", s.LobbyId)
-	err = s.execConfig()
-	if err != nil {
-		s.rcon.RemoveTag("TF2Stadium")
-		return err
-	}
-
-	s.rcon.Query("tftrue_no_hats 0")
 
 	helpers.Logger.Debugf("#%d: Setting whitelist", s.LobbyId)
 	// whitelist
@@ -403,13 +219,18 @@ func (s *Server) Setup() error {
 		s.rcon.Query("mp_tournament_whitelist " + whitelist)
 	}
 
+	s.rcon.AddTag("TF2Stadium")
+	s.rcon.Query("tftrue_no_hats 0; mp_timelimit 0; mp_tournament 1; mp_tournament_restart")
+
 	helpers.Logger.Debugf("#%d: Configured", s.LobbyId)
 	return nil
 }
 
-func (s *Server) Reset() {
-	s.rcon.ChangeMap(s.Map)
-	s.rcon.Reconnect(2 * time.Minute)
+func (s *Server) Reset(changeMap bool) {
+	if changeMap {
+		s.rcon.ChangeMap(s.Map)
+		s.rcon.Reconnect(2 * time.Minute)
+	}
 	s.execConfig()
 }
 
@@ -449,6 +270,15 @@ func (s *Server) execConfig() error {
 func (s *Server) Verify() bool {
 	//Logger.Debug("#%d: Verifying %s...", s.LobbyId, s.Info.Host)
 	password, err := s.rcon.GetServerPassword()
+
+	players, _ := s.rcon.GetPlayers()
+	publishEvent(Event{
+		Name:    "playersList",
+		Players: players,
+	})
+
+	s.rcon.QueryNoResp("sv_logsecret " + s.source.Secret + "; logaddress_add " + externalIP + ":" + config.Constants.LogsPort)
+
 	if err == nil {
 		if password == s.Info.ServerPassword {
 			return true
@@ -466,14 +296,6 @@ func (s *Server) Verify() bool {
 
 	}
 
-	players, _ := s.rcon.GetPlayers()
-	publishEvent(Event{
-		Name:    "playersList",
-		Players: players,
-	})
-
-	s.rcon.QueryNoResp("sv_logsecret " + s.source.Secret + "; logaddress_add " + externalIP + ":" + config.Constants.LogsPort)
-
 	return true
 }
 
@@ -484,9 +306,8 @@ func (s *Server) KickAll() error {
 }
 
 var (
-	rReport        = regexp.MustCompile(`^!rep\s+(.+)\s+(.+)`)
-	rFirstSubArg   = regexp.MustCompile(`^!sub\s+(.+)`)
-	stopRepTimeout = make(map[uint](chan struct{}))
+	rReport      = regexp.MustCompile(`^!rep\s+(.+)\s+(.+).*`)
+	rFirstSubArg = regexp.MustCompile(`^!sub\s+(.+)`)
 
 	repsNeeded = map[models.LobbyType]int{
 		models.LobbyTypeSixes:      5,
@@ -539,12 +360,25 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 
 	target, err := database.GetSteamIDFromSlot(team, argSlot, s.LobbyId, s.Type)
 	if err != nil {
-		s.rcon.Say("!rep: Unknown or empty slot")
+		var slots string
+
+		switch s.Type {
+		case models.LobbyTypeSixes:
+			slots = "scout1/scout2/demoman/pocket/roamer/medic"
+		case models.LobbyTypeHighlander:
+			slots = "scout/soldier/pyro/demoman/heavy/engineer/medic/spy/sniper"
+		case models.LobbyTypeUltiduo:
+			slots = "soldier/medic"
+		case models.LobbyTypeBball:
+			slots = "soldier1/soldier2"
+		}
+
+		s.rcon.Say("!rep: valid slots - " + slots)
 		return
 	}
 
 	if database.IsReported(s.LobbyId, target) {
-		s.rcon.Say("Player has already been reported")
+		s.rcon.Say("!rep: You have already voted")
 		return
 	}
 
@@ -576,14 +410,9 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 	curReps := countReports(target, s.LobbyId)
 	name := database.GetNameFromSteamID(target)
 
-	say := fmt.Sprintf("Got %d votes votes for reporting %s (%d needed)", curReps, name, repsNeeded[s.Type])
-	s.rcon.Say(say)
-
 	switch curReps {
 	case repsNeeded[s.Type]:
 		//Got needed number of reports, ask helen to substitute player
-		say := fmt.Sprintf("Reporting %s %s: %s", team, argSlot, name)
-		s.rcon.Say(say)
 		publishEvent(Event{
 			Name:    PlayerSubstituted,
 			SteamID: target,
@@ -593,37 +422,34 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 		// entry will not exist if only 1 report is needed (such as debug
 		// lobbies))
 		s.mapMu.RLock()
-		c, ok := s.stopRepTimer[team+argSlot]
+		timer, ok := s.repTimer[team+argSlot]
 		s.mapMu.RUnlock()
 
-		if ok {
-			c <- struct{}{}
+		if ok && timer.Stop() {
+			s.mapMu.Lock()
+			delete(s.repTimer, team+argSlot)
+			s.mapMu.Unlock()
+
 		}
 
+		say := fmt.Sprintf("Reporting %s %s: %s", strings.ToUpper(team), strings.ToUpper(argSlot), name)
+		s.rcon.Say(say)
+
 	case 1:
-		//first report happened, reset reps one minute later to 0, unless told to stop
-		ticker := time.NewTicker(2 * time.Minute)
-		stop := make(chan struct{})
+		//first report happened, reset reps two minute later to 0, unless told to stop
+		timer := time.AfterFunc(2*time.Minute, func() {
+			ResetReportCount(target, s.LobbyId)
+			say := fmt.Sprintf("Reporting %s %s failed, couldn't get enough votes in 2 minutes.", strings.ToUpper(team), strings.ToUpper(argSlot))
+			s.rcon.Say(say)
+
+		})
 
 		s.mapMu.Lock()
-		s.stopRepTimer[team+argSlot] = stop
+		s.repTimer[team+argSlot] = timer
 		s.mapMu.Unlock()
-
-		go func() {
-			select {
-			case <-ticker.C:
-				say := fmt.Sprintf("Reporting %s %s failed, couldn't get enough votes in 2 minute.", strings.ToUpper(team), strings.ToUpper(argSlot))
-				s.rcon.Say(say)
-				ResetReportCount(target, s.LobbyId)
-			case <-stop:
-				return
-			}
-			//once a sub is found, the report count will be reset with
-			//the rpc's DisallowPlayer method
-			s.mapMu.Lock()
-			delete(s.stopRepTimer, team+argSlot)
-			s.mapMu.Unlock()
-		}()
+	default:
+		say := fmt.Sprintf("Got %d votes for reporting %s (%d needed)", curReps, name, repsNeeded[s.Type])
+		s.rcon.Say(say)
 	}
 
 	return
