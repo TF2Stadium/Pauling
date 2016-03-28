@@ -52,12 +52,13 @@ type Server struct {
 
 func NewServer() *Server {
 	s := &Server{
-		mapMu:         new(sync.RWMutex),
-		repTimer:      make(map[string]*time.Timer, 1),
-		StopVerifier:  make(chan struct{}, 1),
-		playerClasses: make(map[string]*classTime),
-		curplayers:    new(int32),
-		ended:         new(int32),
+		mapMu:           new(sync.RWMutex),
+		repTimer:        make(map[string]*time.Timer, 1),
+		StopVerifier:    make(chan struct{}, 1),
+		playerClasses:   make(map[string]*classTime),
+		playerClassesMu: new(sync.RWMutex),
+		curplayers:      new(int32),
+		ended:           new(int32),
 	}
 
 	return s
