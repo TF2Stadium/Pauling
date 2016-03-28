@@ -428,7 +428,7 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 
 		}
 
-		say := fmt.Sprintf("Reporting %s %s: %s", team, argSlot, name)
+		say := fmt.Sprintf("Reporting %s %s: %s", strings.ToUpper(team), strings.ToUpper(argSlot), name)
 		s.rcon.Say(say)
 
 	case 1:
