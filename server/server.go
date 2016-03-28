@@ -35,7 +35,7 @@ type Server struct {
 
 	LobbyId uint
 
-	mapMu        *sync.RWMutex
+	mapMu        sync.RWMutex
 	repTimer     map[string]*time.Timer
 	StopVerifier chan struct{}
 
@@ -44,7 +44,7 @@ type Server struct {
 	Info   models.ServerRecord
 
 	curplayers      *int32
-	playerClassesMu *sync.RWMutex
+	playerClassesMu sync.RWMutex
 	playerClasses   map[string]*classTime //steamID -> playerClasse
 
 	ended *int32
@@ -52,13 +52,11 @@ type Server struct {
 
 func NewServer() *Server {
 	s := &Server{
-		mapMu:           new(sync.RWMutex),
-		repTimer:        make(map[string]*time.Timer),
-		StopVerifier:    make(chan struct{}, 1),
-		playerClasses:   make(map[string]*classTime),
-		playerClassesMu: new(sync.RWMutex),
-		curplayers:      new(int32),
-		ended:           new(int32),
+		repTimer:      make(map[string]*time.Timer),
+		StopVerifier:  make(chan struct{}, 1),
+		playerClasses: make(map[string]*classTime),
+		curplayers:    new(int32),
+		ended:         new(int32),
 	}
 
 	return s
@@ -448,10 +446,9 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 		s.mapMu.Lock()
 		s.repTimer[team+argSlot] = timer
 		s.mapMu.Unlock()
-	default:
-		say := fmt.Sprintf("Got %d votes for reporting %s (%d needed)", curReps, name, repsNeeded[s.Type])
-		s.rcon.Say(say)
 	}
+	say := fmt.Sprintf("Got %d votes for reporting %s (%d needed)", curReps, name, repsNeeded[s.Type])
+	s.rcon.Say(say)
 
 	return
 }
