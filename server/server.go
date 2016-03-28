@@ -53,7 +53,7 @@ type Server struct {
 func NewServer() *Server {
 	s := &Server{
 		mapMu:           new(sync.RWMutex),
-		repTimer:        make(map[string]*time.Timer, 1),
+		repTimer:        make(map[string]*time.Timer),
 		StopVerifier:    make(chan struct{}, 1),
 		playerClasses:   make(map[string]*classTime),
 		playerClassesMu: new(sync.RWMutex),
