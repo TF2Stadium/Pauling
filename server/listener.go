@@ -207,6 +207,11 @@ func (s *Server) PlayerGlobalMessage(data TF2RconWrapper.PlayerData, text string
 }
 
 func (s *Server) GameOver() {
+	if atomic.LoadInt32(s.ended) == 1 {
+		return
+	}
+
+	atomic.StoreInt32(s.ended, 1)
 	s.StopListening()
 
 	logsBuff := s.source.Logs()

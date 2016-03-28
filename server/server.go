@@ -46,6 +46,8 @@ type Server struct {
 	curplayers      *int32
 	playerClassesMu *sync.RWMutex
 	playerClasses   map[string]*classTime //steamID -> playerClasse
+
+	ended *int32
 }
 
 func NewServer() *Server {
@@ -54,6 +56,8 @@ func NewServer() *Server {
 		repTimer:      make(map[string]*time.Timer, 1),
 		StopVerifier:  make(chan struct{}, 1),
 		playerClasses: make(map[string]*classTime),
+		curplayers:    new(int32),
+		ended:         new(int32),
 	}
 
 	return s
