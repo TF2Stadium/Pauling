@@ -210,29 +210,32 @@ func (s *Server) GameOver() {
 	if atomic.LoadInt32(s.ended) == 1 {
 		return
 	}
-
 	atomic.StoreInt32(s.ended, 1)
-	s.StopListening()
 
 	logsBuff := s.source.Logs()
 	logsBuff.WriteString("L " + time.Now().Format(TF2RconWrapper.TimeFormat) + ": Log file closed.\n")
 
-	if config.Constants.LogsTFAPIKey == "" {
+	var logID int
+	if config.Constants.LogsTFAPIKey != "" {
+		var err error
+
+		logID, err = logs.Upload(fmt.Sprintf("TF2Stadium Lobby #%d", s.LobbyId), s.Map, logsBuff)
+		if err != nil {
+			helpers.Logger.Warningf("%d: %s", s.LobbyId, err.Error())
+			ioutil.WriteFile(fmt.Sprintf("%d.log", s.LobbyId), logsBuff.Bytes(), 0666)
+		}
+	} else {
 		helpers.Logger.Debug("No logs.tf API key, writing logs to file")
 		ioutil.WriteFile(fmt.Sprintf("%d.log", s.LobbyId), logsBuff.Bytes(), 0666)
 	}
 
-	logID, err := logs.Upload(fmt.Sprintf("TF2Stadium Lobby #%d", s.LobbyId), s.Map, logsBuff)
-	if err != nil {
-		helpers.Logger.Warningf("%d: %s", s.LobbyId, err.Error())
-		ioutil.WriteFile(fmt.Sprintf("%d.log", s.LobbyId), logsBuff.Bytes(), 0666)
-	}
 	publishEvent(Event{
 		Name:       MatchEnded,
 		LobbyID:    s.LobbyId,
 		LogsID:     logID,
 		ClassTimes: s.playerClasses})
 
+	s.StopListening()
 	return
 }
 
