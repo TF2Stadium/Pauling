@@ -104,9 +104,7 @@ func (Pauling) End(args *models.Args, nop *Noreply) error {
 	}
 
 	server.DeleteServer(s.LobbyId)
-	//now := time.Now().Unix()
 	s.StopListening()
-	//Logger.Debug("%d", time.Now().Unix()-now)
 
 	return nil
 }
