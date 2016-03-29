@@ -229,11 +229,13 @@ func (s *Server) GameOver() {
 		ioutil.WriteFile(fmt.Sprintf("%d.log", s.LobbyId), logsBuff.Bytes(), 0666)
 	}
 
+	s.playerClassesMu.RLock()
 	publishEvent(Event{
 		Name:       MatchEnded,
 		LobbyID:    s.LobbyId,
 		LogsID:     logID,
 		ClassTimes: s.playerClasses})
+	s.playerClassesMu.RUnlock()
 
 	s.StopListening()
 	return
