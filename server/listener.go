@@ -9,7 +9,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/TF2Stadium/Helen/models"
+	"github.com/TF2Stadium/Helen/models/lobby/format"
 	"github.com/TF2Stadium/Pauling/config"
 	"github.com/TF2Stadium/Pauling/database"
 	"github.com/TF2Stadium/Pauling/helpers"
@@ -66,7 +66,7 @@ func (s *Server) PlayerConnected(data TF2RconWrapper.PlayerData) {
 		}
 
 		atomic.AddInt32(s.curplayers, 1)
-		if int(atomic.LoadInt32(s.curplayers)) == 2*models.NumberOfClassesMap[s.Type] {
+		if int(atomic.LoadInt32(s.curplayers)) == 2*format.NumberOfClassesMap[s.Type] {
 			ExecFile("soap_off.cfg", s.rcon)
 		}
 	} else {

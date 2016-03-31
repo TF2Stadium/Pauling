@@ -7,12 +7,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/TF2Stadium/Helen/models"
+	"github.com/TF2Stadium/Helen/models/gameserver"
+	"github.com/TF2Stadium/Helen/models/lobby/format"
 	"github.com/TF2Stadium/Pauling/config"
 	"github.com/TF2Stadium/Pauling/database"
 	"github.com/TF2Stadium/Pauling/helpers"
 	"github.com/TF2Stadium/PlayerStatsScraper/steamid"
 	"github.com/TF2Stadium/TF2RconWrapper"
+	"sync/atomic"
 )
 
 const (
@@ -30,7 +32,7 @@ const (
 type Server struct {
 	Map       string // lobby map
 	League    string
-	Type      models.LobbyType // 9v9 6v6 4v4...
+	Type      format.Format // 9v9 6v6 4v4...
 	Whitelist string
 
 	LobbyId uint
@@ -41,7 +43,7 @@ type Server struct {
 
 	source *TF2RconWrapper.Source
 	rcon   *TF2RconWrapper.TF2RconConnection
-	Info   models.ServerRecord
+	Info   gameserver.Server
 
 	curplayers      *int32
 	playerClassesMu sync.RWMutex
@@ -241,7 +243,7 @@ func (s *Server) execConfig() error {
 		return err
 	}
 
-	if s.Type != models.LobbyTypeDebug {
+	if s.Type != format.Debug {
 		err = ExecFile("base.cfg", s.rcon)
 		if err != nil {
 			return err
@@ -255,7 +257,7 @@ func (s *Server) execConfig() error {
 	}
 	err = ExecFile(leagueConfigPath, s.rcon)
 
-	if s.Type != models.LobbyTypeDebug {
+	if s.Type != format.Debug {
 		err = ExecFile("after_format.cfg", s.rcon)
 		if err != nil {
 			return err
@@ -287,7 +289,7 @@ func (s *Server) Verify() bool {
 	err = s.rcon.ChangeServerPassword(s.Info.ServerPassword)
 	if err != nil {
 		err = s.rcon.Reconnect(5 * time.Minute)
-		if err != nil {
+		if err != nil && atomic.LoadInt32(s.ended) == 1 {
 			publishEvent(Event{
 				Name:    DisconnectedFromServer,
 				LobbyID: s.LobbyId})
@@ -308,13 +310,13 @@ var (
 	rReport      = regexp.MustCompile(`^!rep\s+(.+)\s+(.+).*`)
 	rFirstSubArg = regexp.MustCompile(`^!sub\s+(.+)`)
 
-	repsNeeded = map[models.LobbyType]int{
-		models.LobbyTypeSixes:      5,
-		models.LobbyTypeDebug:      2,
-		models.LobbyTypeHighlander: 6,
-		models.LobbyTypeFours:      4,
-		models.LobbyTypeBball:      3,
-		models.LobbyTypeUltiduo:    3,
+	repsNeeded = map[format.Format]int{
+		format.Sixes:      5,
+		format.Debug:      2,
+		format.Highlander: 6,
+		format.Fours:      4,
+		format.Bball:      3,
+		format.Ultiduo:    3,
 	}
 )
 
@@ -362,13 +364,13 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 		var slots string
 
 		switch s.Type {
-		case models.LobbyTypeSixes:
+		case format.Sixes:
 			slots = "scout1/scout2/demoman/pocket/roamer/medic"
-		case models.LobbyTypeHighlander:
+		case format.Highlander:
 			slots = "scout/soldier/pyro/demoman/heavy/engineer/medic/spy/sniper"
-		case models.LobbyTypeUltiduo:
+		case format.Ultiduo:
 			slots = "soldier/medic"
-		case models.LobbyTypeBball:
+		case format.Bball:
 			slots = "soldier1/soldier2"
 		}
 

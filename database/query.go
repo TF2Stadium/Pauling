@@ -1,7 +1,8 @@
 package database
 
 import (
-	"github.com/TF2Stadium/Helen/models"
+	"github.com/TF2Stadium/Helen/models/lobby"
+	"github.com/TF2Stadium/Helen/models/lobby/format"
 	"github.com/TF2Stadium/Pauling/helpers"
 )
 
@@ -21,7 +22,7 @@ func SetSecret(secret string, id uint) {
 }
 
 func IsAllowed(lobbyID uint, commID string) (bool, string) {
-	var state models.LobbyState
+	var state lobby.State
 	var playerID uint
 	var needsSub bool
 	db.QueryRow("SELECT id FROM players WHERE steam_id = $1", commID).Scan(&playerID)
@@ -32,7 +33,7 @@ func IsAllowed(lobbyID uint, commID string) (bool, string) {
 
 	db.QueryRow("SELECT state FROM lobbies WHERE id = $1", lobbyID).Scan(&state)
 
-	if state == models.LobbyStateWaiting {
+	if state == lobby.Waiting {
 		return false, "The lobby hasn't started yet."
 	}
 
@@ -47,18 +48,18 @@ func IsReported(lobbyID uint, commID string) (reported bool) {
 	return
 }
 
-func GetTeam(lobbyID uint, lobbyType models.LobbyType, commID string) (team string) {
+func GetTeam(lobbyID uint, lobbyType format.Format, commID string) (team string) {
 	var slot int
 	err := db.QueryRow("SELECT lobby_slots.slot FROM lobby_slots INNER JOIN players ON lobby_slots.player_id = players.id WHERE lobby_slots.lobby_id = $1 AND players.steam_id = $2", lobbyID, commID).Scan(&slot)
 	if err != nil {
 		helpers.Logger.Error(err.Error())
 	}
-	team, _, _ = models.LobbyGetSlotInfoString(lobbyType, slot)
+	team, _, _ = format.GetSlotTeamClass(lobbyType, slot)
 	return
 }
 
-func GetSteamIDFromSlot(team, class string, lobbyID uint, lobbyType models.LobbyType) (string, error) {
-	slot, err := models.LobbyGetPlayerSlot(lobbyType, team, class)
+func GetSteamIDFromSlot(team, class string, lobbyID uint, lobbyType format.Format) (string, error) {
+	slot, err := format.GetSlot(lobbyType, team, class)
 	if err != nil {
 		return "", err
 	}

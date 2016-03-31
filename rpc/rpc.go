@@ -7,7 +7,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/TF2Stadium/Helen/models"
+	"github.com/TF2Stadium/Helen/models/gameserver"
+	rpcpackage "github.com/TF2Stadium/Helen/models/rpc"
 	"github.com/TF2Stadium/Pauling/config"
 	"github.com/TF2Stadium/Pauling/helpers"
 	"github.com/TF2Stadium/Pauling/server"
@@ -33,7 +34,7 @@ func StartRPC(url string) {
 	rpc.ServeCodec(serverCodec)
 }
 
-func (Pauling) VerifyInfo(info *models.ServerRecord, nop *Noreply) error {
+func (Pauling) VerifyInfo(info *gameserver.Server, _ *struct{}) error {
 	rc, err := rconwrapper.NewTF2RconConnection(info.Host, info.RconPassword)
 	if err != nil {
 		switch err.(type) {
@@ -66,7 +67,7 @@ func (Pauling) VerifyInfo(info *models.ServerRecord, nop *Noreply) error {
 	return nil
 }
 
-func (Pauling) SetupServer(args *models.Args, nop *Noreply) error {
+func (Pauling) SetupServer(args *rpcpackage.Args, _ *struct{}) error {
 	s := server.NewServer()
 	s.LobbyId = args.Id
 	s.Info = args.Info
@@ -87,7 +88,7 @@ func (Pauling) SetupServer(args *models.Args, nop *Noreply) error {
 	return nil
 }
 
-func (Pauling) ReExecConfig(args *models.Args, nop *Noreply) error {
+func (Pauling) ReExecConfig(args *rpcpackage.Args, _ *struct{}) error {
 	s, err := server.GetServer(args.Id)
 	if err != nil {
 		return err
@@ -97,7 +98,7 @@ func (Pauling) ReExecConfig(args *models.Args, nop *Noreply) error {
 	return nil
 }
 
-func (Pauling) End(args *models.Args, nop *Noreply) error {
+func (Pauling) End(args *rpcpackage.Args, nop *Noreply) error {
 	s, err := server.GetServer(args.Id)
 	if err != nil {
 		return err
@@ -109,7 +110,7 @@ func (Pauling) End(args *models.Args, nop *Noreply) error {
 	return nil
 }
 
-func (Pauling) DisallowPlayer(args *models.Args, nop *Noreply) error {
+func (Pauling) DisallowPlayer(args *rpcpackage.Args, nop *Noreply) error {
 	s, err := server.GetServer(args.Id)
 	if err != nil {
 		return err
@@ -123,7 +124,7 @@ func (Pauling) DisallowPlayer(args *models.Args, nop *Noreply) error {
 	return nil
 }
 
-func (Pauling) Say(args *models.Args, nop *Noreply) error {
+func (Pauling) Say(args *rpcpackage.Args, nop *Noreply) error {
 	s, err := server.GetServer(args.Id)
 	if err != nil {
 		return err

@@ -9,23 +9,23 @@ import (
 	"strings"
 	"time"
 
-	"github.com/TF2Stadium/Helen/models"
+	"github.com/TF2Stadium/Helen/models/lobby/format"
 	tf2rcon "github.com/TF2Stadium/TF2RconWrapper"
 )
 
-var formatMap = map[models.LobbyType]string{
-	models.LobbyTypeSixes:      "sixes",
-	models.LobbyTypeHighlander: "highlander",
-	models.LobbyTypeBball:      "bball",
-	models.LobbyTypeUltiduo:    "ultiduo",
-	models.LobbyTypeFours:      "fours",
-	models.LobbyTypeDebug:      "debug",
+var formatMap = map[format.Format]string{
+	format.Sixes:      "sixes",
+	format.Highlander: "highlander",
+	format.Bball:      "bball",
+	format.Ultiduo:    "ultiduo",
+	format.Fours:      "fours",
+	format.Debug:      "debug",
 }
 
 var rMapName = regexp.MustCompile(`^\w+(_+)*\w*$`)
 var ErrInvalidMap = errors.New("Invalid Map Name.")
 
-func ConfigName(mapName string, lobbyType models.LobbyType, ruleset string) (string, error) {
+func ConfigName(mapName string, lobbyType format.Format, ruleset string) (string, error) {
 	if !rMapName.MatchString(mapName) {
 		return "", ErrInvalidMap
 	}
@@ -41,7 +41,7 @@ func ConfigName(mapName string, lobbyType models.LobbyType, ruleset string) (str
 	return file, nil
 }
 
-func FormatConfigName(lobbyType models.LobbyType) string {
+func FormatConfigName(lobbyType format.Format) string {
 	return fmt.Sprintf("formats/%s.cfg", formatMap[lobbyType])
 }
 
