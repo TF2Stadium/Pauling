@@ -43,7 +43,7 @@ type Server struct {
 
 	source *TF2RconWrapper.Source
 	rcon   *TF2RconWrapper.TF2RconConnection
-	Info   gameserver.Server
+	Info   gameserver.ServerRecord
 
 	curplayers      *int32
 	playerClassesMu sync.RWMutex

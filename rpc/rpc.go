@@ -34,7 +34,7 @@ func StartRPC(url string) {
 	rpc.ServeCodec(serverCodec)
 }
 
-func (Pauling) VerifyInfo(info *gameserver.Server, _ *struct{}) error {
+func (Pauling) VerifyInfo(info *gameserver.ServerRecord, _ *struct{}) error {
 	rc, err := rconwrapper.NewTF2RconConnection(info.Host, info.RconPassword)
 	if err != nil {
 		switch err.(type) {
