@@ -98,8 +98,8 @@ var classes = map[string]int{
 
 type classTime struct {
 	mu          *sync.Mutex
-	current     int // current class being played
-	lastChanged time.Time
+	current     int       // current class being played
+	lastChanged time.Time // time player last changed their class
 
 	Scout    time.Duration
 	Soldier  time.Duration
@@ -128,6 +128,10 @@ func (s *Server) PlayerClassChanged(player TF2RconWrapper.PlayerData, class stri
 		return
 	}
 
+	classtime.updateClassTime(class)
+}
+
+func (classtime *classTime) updateClassTime(class string) {
 	classtime.mu.Lock()
 	defer classtime.mu.Unlock()
 
@@ -158,11 +162,15 @@ func (s *Server) PlayerClassChanged(player TF2RconWrapper.PlayerData, class stri
 		prev = &classtime.Medic
 	case spy:
 		prev = &classtime.Spy
+	default:
+		helpers.Logger.Error("Invalid class value")
+		return
 	}
 
 	*prev += time.Since(classtime.lastChanged)
 	classtime.current = classes[class]
 	classtime.lastChanged = time.Now()
+
 }
 
 func (s *Server) PlayerDisconnected(data TF2RconWrapper.PlayerData) {
@@ -181,9 +189,10 @@ func (s *Server) TournamentStarted() {
 }
 
 func (s *Server) PlayerGlobalMessage(data TF2RconWrapper.PlayerData, text string) {
-	if strings.HasPrefix(text, "!rep") {
+	switch {
+	case strings.HasPrefix(text, "!rep"):
 		s.report(data)
-	} else if strings.HasPrefix(text, "!sub") {
+	case strings.HasPrefix(text, "!sub"):
 		if rFirstSubArg.FindStringSubmatch(text) != nil {
 			// If they tried to use !sub with an argument, they
 			// probably meant to !rep
@@ -201,13 +210,17 @@ func (s *Server) PlayerGlobalMessage(data TF2RconWrapper.PlayerData, text string
 				data.Username, data.SteamId)
 			s.rcon.Say(say)
 		}
-	} else if strings.HasPrefix(text, "!soapoff ") {
+	case strings.HasPrefix(text, "!soapoff"):
 		ExecFile("soap_off.cfg", s.rcon)
+	case strings.HasPrefix(text, "!help"):
+		s.rcon.Say(`Use !rep for reporting, !sub for substituting yourself, Lobby Leaders and Admins can use !kick <team> <slot> to kick specific players.`)
+	case strings.HasPrefix(text, "!kick"):
+
 	}
 }
 
 func (s *Server) GameOver() {
-	if atomic.LoadInt32(s.ended) == 1 {
+	if s.hasEnded() {
 		return
 	}
 	atomic.StoreInt32(s.ended, 1)
@@ -230,6 +243,15 @@ func (s *Server) GameOver() {
 	}
 
 	s.playerClassesMu.RLock()
+	for _, classtime := range s.playerClasses {
+		classtime.mu.Lock()
+		// "flushes" the time played for the current class
+		// we don't need classtime values after this,
+		// since the game has ended
+		classtime.updateClassTime("scout")
+		classtime.mu.Unlock()
+	}
+
 	publishEvent(Event{
 		Name:       MatchEnded,
 		LobbyID:    s.LobbyId,
