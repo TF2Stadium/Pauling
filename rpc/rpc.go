@@ -14,7 +14,7 @@ import (
 	"github.com/TF2Stadium/Pauling/server"
 	"github.com/TF2Stadium/PlayerStatsScraper/steamid"
 	rconwrapper "github.com/TF2Stadium/TF2RconWrapper"
-	"github.com/james4k/rcon"
+	"github.com/TF2Stadium/rcon"
 	"github.com/streadway/amqp"
 	"github.com/vibhavp/amqp-rpc"
 )
