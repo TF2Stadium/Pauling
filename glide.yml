@@ -10,7 +10,6 @@ import:
   subpackages:
   - steamid
 - package: github.com/TF2Stadium/TF2RconWrapper
-- package: github.com/james4k/rcon
 - package: github.com/jinzhu/gorm
 - package: github.com/kelseyhightower/envconfig
 - package: github.com/lib/pq
