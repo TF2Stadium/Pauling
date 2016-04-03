@@ -289,7 +289,7 @@ func (s *Server) Verify() bool {
 	err = s.rcon.ChangeServerPassword(s.Info.ServerPassword)
 	if err != nil {
 		err = s.rcon.Reconnect(5 * time.Minute)
-		if err != nil && atomic.LoadInt32(s.ended) == 1 {
+		if err != nil && !s.hasEnded() {
 			publishEvent(Event{
 				Name:    DisconnectedFromServer,
 				LobbyID: s.LobbyId})
@@ -298,6 +298,10 @@ func (s *Server) Verify() bool {
 	}
 
 	return true
+}
+
+func (s *Server) hasEnded() bool {
+	return atomic.LoadInt32(s.ended) == 1
 }
 
 func (s *Server) KickAll() error {
@@ -320,12 +324,28 @@ var (
 	}
 )
 
+func slot(f format.Format) string {
+	switch f {
+	case format.Sixes:
+		return "scout1/scout2/demoman/pocket/roamer/medic"
+	case format.Highlander:
+		return "scout/soldier/pyro/demoman/heavy/engineer/medic/spy/sniper"
+	case format.Ultiduo:
+		return "soldier/medic"
+	case format.Bball:
+		return "soldier1/soldier2"
+	default:
+		return "class name"
+	}
+
+}
+
 func (s *Server) report(data TF2RconWrapper.PlayerData) {
 	var team string
 
 	matches := rReport.FindStringSubmatch(data.Text)
 	if len(matches) != 3 {
-		s.rcon.Say("Usage: !rep our/their/red/blu slotname")
+		s.rcon.Say("Usage: !rep our/their/red/blu " + slot(s.Type))
 		return
 	}
 
@@ -362,17 +382,6 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 	target, err := database.GetSteamIDFromSlot(team, argSlot, s.LobbyId, s.Type)
 	if err != nil {
 		var slots string
-
-		switch s.Type {
-		case format.Sixes:
-			slots = "scout1/scout2/demoman/pocket/roamer/medic"
-		case format.Highlander:
-			slots = "scout/soldier/pyro/demoman/heavy/engineer/medic/spy/sniper"
-		case format.Ultiduo:
-			slots = "soldier/medic"
-		case format.Bball:
-			slots = "soldier1/soldier2"
-		}
 
 		s.rcon.Say("!rep: valid slots - " + slots)
 		return
