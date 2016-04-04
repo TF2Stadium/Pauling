@@ -186,6 +186,9 @@ func (s *Server) Setup() error {
 	s.source = Listener.AddSource(eventlistener, s.rcon)
 	database.SetSecret(s.source.Secret, s.Info.ID)
 
+	s.rcon.AddTag("TF2Stadium")
+	s.rcon.Query("tftrue_no_hats 0; mp_timelimit 0; mp_tournament 1; mp_tournament_restart")
+
 	helpers.Logger.Debugf("#%d: Setting whitelist", s.LobbyId)
 	// whitelist
 	_, err = s.rcon.Query(fmt.Sprintf("tftrue_whitelist_id %s", s.Whitelist))
@@ -219,9 +222,6 @@ func (s *Server) Setup() error {
 		}
 		s.rcon.Query("mp_tournament_whitelist " + whitelist)
 	}
-
-	s.rcon.AddTag("TF2Stadium")
-	s.rcon.Query("tftrue_no_hats 0; mp_timelimit 0; mp_tournament 1; mp_tournament_restart")
 
 	helpers.Logger.Debugf("#%d: Configured", s.LobbyId)
 	return nil
@@ -272,15 +272,15 @@ func (s *Server) Verify() bool {
 	//Logger.Debug("#%d: Verifying %s...", s.LobbyId, s.Info.Host)
 	password, err := s.rcon.GetServerPassword()
 
-	players, _ := s.rcon.GetPlayers()
-	publishEvent(Event{
-		Name:    "playersList",
-		Players: players,
-	})
-
-	s.rcon.QueryNoResp("sv_logsecret " + s.source.Secret + "; logaddress_add " + externalIP + ":" + config.Constants.LogsPort)
-
 	if err == nil {
+		players, _ := s.rcon.GetPlayers()
+		publishEvent(Event{
+			Name:    "playersList",
+			Players: players,
+		})
+
+		s.rcon.QueryNoResp("sv_logsecret " + s.source.Secret + "; logaddress_add " + externalIP + ":" + config.Constants.LogsPort)
+
 		if password == s.Info.ServerPassword {
 			return true
 		}
