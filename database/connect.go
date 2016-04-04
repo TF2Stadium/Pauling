@@ -2,6 +2,7 @@ package database
 
 import (
 	"database/sql"
+	"flag"
 	"net/url"
 
 	"github.com/TF2Stadium/Pauling/config"
@@ -9,7 +10,10 @@ import (
 	_ "github.com/lib/pq"
 )
 
-var db *sql.DB
+var (
+	db      *sql.DB
+	maxOpen = flag.Int("maxopen", 15, "maximum number of open database connections")
+)
 
 func Connect() {
 	DBUrl := url.URL{
@@ -28,6 +32,7 @@ func Connect() {
 	if err != nil {
 		helpers.Logger.Fatal(err)
 	}
+	db.SetMaxOpenConns(*maxOpen)
 
 	helpers.Logger.Debug("Connected.")
 }
