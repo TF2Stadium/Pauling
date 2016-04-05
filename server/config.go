@@ -71,7 +71,7 @@ func ExecFile(path string, rcon *tf2rcon.TF2RconConnection) error {
 		if err != nil {
 			rcon.Reconnect(time.Second * 10)
 			if _, err = rcon.Query(line); err != nil {
-				return err
+				continue
 			}
 		}
 
