@@ -353,10 +353,6 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 	argSlot := strings.ToLower(matches[2])
 
 	source, _ := steamid.SteamIdToCommId(data.SteamId)
-	if database.IsReported(s.LobbyId, source) {
-		s.rcon.Say("!rep: Player has already been reported.")
-		return
-	}
 
 	team = database.GetTeam(s.LobbyId, s.Type, source)
 	//	helpers.Logger.Debug(team)
@@ -388,7 +384,7 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 	}
 
 	if database.IsReported(s.LobbyId, target) {
-		s.rcon.Say("!rep: You have already voted")
+		s.rcon.Say("!rep: Player has already been reported")
 		return
 	}
 
@@ -409,7 +405,7 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 
 	if err != nil {
 		if _, ok := err.(*repError); ok {
-			s.rcon.Say("!rep: Already reported")
+			s.rcon.Say("!rep: You have already voted.")
 		} else {
 			s.rcon.Say(err.Error())
 			helpers.Logger.Errorf("#%d: %v", s.LobbyId, err)
