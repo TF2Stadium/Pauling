@@ -14,7 +14,7 @@ import (
 	"github.com/TF2Stadium/Pauling/server"
 	"github.com/TF2Stadium/PlayerStatsScraper/steamid"
 	rconwrapper "github.com/TF2Stadium/TF2RconWrapper"
-	"github.com/james4k/rcon"
+	"github.com/TF2Stadium/rcon"
 	"github.com/streadway/amqp"
 	"github.com/vibhavp/amqp-rpc"
 )
@@ -120,6 +120,13 @@ func (Pauling) DisallowPlayer(args *rpcpackage.Args, nop *Noreply) error {
 	server.ResetReportCount(steamID, args.Id)
 
 	err = s.KickPlayer(args.SteamId, "[tf2stadium.com] You have been replaced.")
+	if err != nil {
+		go func() {
+			for err != nil {
+				err = s.KickPlayer(args.SteamId, "[tf2stadium.com] You have been replaced.")
+			}
+		}()
+	}
 
 	return nil
 }
