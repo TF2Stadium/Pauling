@@ -213,7 +213,7 @@ func (s *Server) PlayerGlobalMessage(data TF2RconWrapper.PlayerData, text string
 	case strings.HasPrefix(text, "!soapoff"):
 		ExecFile("soap_off.cfg", s.rcon)
 	case strings.HasPrefix(text, "!help"):
-		s.rcon.Say(`Use !rep for reporting, !sub for substituting yourself, Lobby Leaders and Admins can use !kick <team> <slot> to kick specific players.`)
+		s.rcon.Say(`Use !rep for reporting, !sub for substituting yourself.`)
 	case strings.HasPrefix(text, "!kick"):
 
 	}
