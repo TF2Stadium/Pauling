@@ -2,7 +2,7 @@ package database
 
 import (
 	"database/sql"
-	"flag"
+	//"flag"
 	"net/url"
 
 	"github.com/TF2Stadium/Pauling/config"
