@@ -190,8 +190,15 @@ func (s *Server) Setup() error {
 	s.rcon.Query("tftrue_no_hats 0; mp_timelimit 0; mp_tournament 1; mp_tournament_restart")
 
 	helpers.Logger.Debugf("#%d: Setting whitelist", s.LobbyId)
+	s.execWhitelist()
+
+	helpers.Logger.Debugf("#%d: Configured", s.LobbyId)
+	return nil
+}
+
+func (s *Server) execWhitelist() {
 	// whitelist
-	_, err = s.rcon.Query(fmt.Sprintf("tftrue_whitelist_id %s", s.Whitelist))
+	_, err := s.rcon.Query(fmt.Sprintf("tftrue_whitelist_id %s", s.Whitelist))
 	if err == TF2RconWrapper.ErrUnknownCommand {
 		var whitelist string
 
@@ -223,8 +230,6 @@ func (s *Server) Setup() error {
 		s.rcon.Query("mp_tournament_whitelist " + whitelist)
 	}
 
-	helpers.Logger.Debugf("#%d: Configured", s.LobbyId)
-	return nil
 }
 
 func (s *Server) Reset(changeMap bool) {
@@ -264,6 +269,7 @@ func (s *Server) execConfig() error {
 		}
 	}
 
+	s.execWhitelist()
 	return err
 }
 
