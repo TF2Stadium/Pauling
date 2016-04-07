@@ -11,8 +11,8 @@ import (
 )
 
 var (
-	db      *sql.DB
-	maxOpen = flag.Int("maxopen", 15, "maximum number of open database connections")
+	db *sql.DB
+	//maxOpen = flag.Int("maxopen", 15, "maximum number of open database connections")
 )
 
 func Connect() {
@@ -32,7 +32,7 @@ func Connect() {
 	if err != nil {
 		helpers.Logger.Fatal(err)
 	}
-	db.SetMaxOpenConns(*maxOpen)
+	//db.SetMaxOpenConns(*maxOpen)
 
 	helpers.Logger.Debug("Connected.")
 }
