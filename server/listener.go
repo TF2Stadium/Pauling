@@ -244,12 +244,10 @@ func (s *Server) GameOver() {
 
 	s.playerClassesMu.RLock()
 	for _, classtime := range s.playerClasses {
-		classtime.mu.Lock()
 		// "flushes" the time played for the current class
 		// we don't need classtime values after this,
 		// since the game has ended
 		classtime.updateClassTime("scout")
-		classtime.mu.Unlock()
 	}
 
 	publishEvent(Event{
