@@ -7,7 +7,7 @@ import (
 )
 
 func GetPlayerID(commID string) (playerID uint) {
-	err := db.QueryRow("SELECT name FROM player_slots WHERE steam_id = $1 LIMIT 1", commID).Scan(&playerID)
+	err := db.QueryRow("SELECT name FROM players WHERE steam_id = $1", commID).Scan(&playerID)
 	if err != nil {
 		helpers.Logger.Error(err.Error())
 	}
