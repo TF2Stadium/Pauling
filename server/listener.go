@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -56,15 +55,6 @@ func (s *Server) PlayerConnected(data TF2RconWrapper.PlayerData) {
 			SteamID: commID,
 		})
 
-		s.playerClassesMu.RLock()
-		_, ok := s.playerClasses[commID]
-		s.playerClassesMu.RUnlock()
-		if !ok {
-			s.playerClassesMu.Lock()
-			s.playerClasses[commID] = &classTime{mu: new(sync.Mutex)}
-			s.playerClassesMu.Unlock()
-		}
-
 		atomic.AddInt32(s.curplayers, 1)
 		if int(atomic.LoadInt32(s.curplayers)) == 2*format.NumberOfClassesMap[s.Type] {
 			ExecFile("soap_off.cfg", s.rcon)
@@ -82,95 +72,6 @@ func (s *Server) RconCommand(_, command string) {
 
 		s.StopListening()
 	}
-}
-
-var classes = map[string]int{
-	"scout":        scout,
-	"soldier":      soldier,
-	"pyro":         pyro,
-	"engineer":     engineer,
-	"heavyweapons": heavy,
-	"demoman":      demoman,
-	"spy":          spy,
-	"medic":        medic,
-	"sniper":       sniper,
-}
-
-type classTime struct {
-	mu          *sync.Mutex
-	current     int       // current class being played
-	lastChanged time.Time // time player last changed their class
-
-	Scout    time.Duration
-	Soldier  time.Duration
-	Pyro     time.Duration
-	Demoman  time.Duration
-	Heavy    time.Duration
-	Engineer time.Duration
-	Sniper   time.Duration
-	Medic    time.Duration
-	Spy      time.Duration
-}
-
-func (s *Server) PlayerSpawned(player TF2RconWrapper.PlayerData, class string) {
-	s.PlayerClassChanged(player, class)
-}
-
-func (s *Server) PlayerClassChanged(player TF2RconWrapper.PlayerData, class string) {
-	commID, _ := steamid.SteamIdToCommId(player.SteamId)
-
-	s.playerClassesMu.RLock()
-	classtime, ok := s.playerClasses[commID]
-	s.playerClassesMu.RUnlock()
-
-	if !ok { //shouldn't happen, map entry for every player is created when they connect
-		helpers.Logger.Errorf("No map entry for %s found", commID)
-		return
-	}
-
-	classtime.updateClassTime(class)
-}
-
-func (classtime *classTime) updateClassTime(class string) {
-	classtime.mu.Lock()
-	defer classtime.mu.Unlock()
-
-	if classtime.lastChanged.IsZero() {
-		classtime.current = classes[class]
-		classtime.lastChanged = time.Now()
-		return
-	}
-
-	var prev *time.Duration // previous class
-
-	switch classtime.current {
-	case scout:
-		prev = &classtime.Scout
-	case soldier:
-		prev = &classtime.Soldier
-	case pyro:
-		prev = &classtime.Pyro
-	case demoman:
-		prev = &classtime.Demoman
-	case heavy:
-		prev = &classtime.Heavy
-	case engineer:
-		prev = &classtime.Engineer
-	case sniper:
-		prev = &classtime.Sniper
-	case medic:
-		prev = &classtime.Medic
-	case spy:
-		prev = &classtime.Spy
-	default:
-		helpers.Logger.Error("Invalid class value")
-		return
-	}
-
-	*prev += time.Since(classtime.lastChanged)
-	classtime.current = classes[class]
-	classtime.lastChanged = time.Now()
-
 }
 
 func (s *Server) PlayerDisconnected(data TF2RconWrapper.PlayerData) {
@@ -242,20 +143,10 @@ func (s *Server) GameOver() {
 		ioutil.WriteFile(fmt.Sprintf("%d.log", s.LobbyId), logsBuff.Bytes(), 0666)
 	}
 
-	s.playerClassesMu.RLock()
-	for _, classtime := range s.playerClasses {
-		// "flushes" the time played for the current class
-		// we don't need classtime values after this,
-		// since the game has ended
-		classtime.updateClassTime("scout")
-	}
-
 	publishEvent(Event{
-		Name:       MatchEnded,
-		LobbyID:    s.LobbyId,
-		LogsID:     logID,
-		ClassTimes: s.playerClasses})
-	s.playerClassesMu.RUnlock()
+		Name:    MatchEnded,
+		LobbyID: s.LobbyId,
+		LogsID:  logID})
 
 	s.StopListening()
 	return

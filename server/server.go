@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/TF2Stadium/Helen/models/gameserver"
@@ -14,19 +15,6 @@ import (
 	"github.com/TF2Stadium/Pauling/helpers"
 	"github.com/TF2Stadium/PlayerStatsScraper/steamid"
 	"github.com/TF2Stadium/TF2RconWrapper"
-	"sync/atomic"
-)
-
-const (
-	scout = iota
-	soldier
-	pyro
-	demoman
-	heavy
-	engineer
-	sniper
-	medic
-	spy
 )
 
 type Server struct {
@@ -45,20 +33,16 @@ type Server struct {
 	rcon   *TF2RconWrapper.TF2RconConnection
 	Info   gameserver.ServerRecord
 
-	curplayers      *int32
-	playerClassesMu sync.RWMutex
-	playerClasses   map[string]*classTime //steamID -> playerClasse
-
-	ended *int32
+	curplayers *int32
+	ended      *int32
 }
 
 func NewServer() *Server {
 	s := &Server{
-		repTimer:      make(map[string]*time.Timer),
-		StopVerifier:  make(chan struct{}, 1),
-		playerClasses: make(map[string]*classTime),
-		curplayers:    new(int32),
-		ended:         new(int32),
+		repTimer:     make(map[string]*time.Timer),
+		StopVerifier: make(chan struct{}, 1),
+		curplayers:   new(int32),
+		ended:        new(int32),
 	}
 
 	return s
@@ -178,7 +162,6 @@ func (s *Server) Setup() error {
 		PlayerGlobalMessage: s.PlayerGlobalMessage,
 		GameOver:            s.GameOver,
 		CVarChange:          s.CVarChange,
-		PlayerClassChanged:  s.PlayerClassChanged,
 		TournamentStarted:   s.TournamentStarted,
 		RconCommand:         s.RconCommand,
 	}
@@ -290,6 +273,11 @@ func (s *Server) Verify() bool {
 		if password == s.Info.ServerPassword {
 			return true
 		}
+	}
+
+	whitelist, _ := s.rcon.GetConVar("tftrue_whitelist_id")
+	if whitelist != s.Whitelist {
+		s.execWhitelist()
 	}
 
 	err = s.rcon.ChangeServerPassword(s.Info.ServerPassword)

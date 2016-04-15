@@ -20,10 +20,9 @@ type Event struct {
 	Name    string
 	SteamID string
 
-	LobbyID    uint
-	LogsID     int //logs.tf ID
-	ClassTimes map[string]*classTime
-	Players    []TF2RconWrapper.Player
+	LobbyID uint
+	LogsID  int //logs.tf ID
+	Players []TF2RconWrapper.Player
 
 	Self bool // true if player has repped themselves
 }
