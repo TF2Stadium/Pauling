@@ -1,7 +1,6 @@
 package database
 
 import (
-	"github.com/TF2Stadium/Helen/models/lobby"
 	"github.com/TF2Stadium/Helen/models/lobby/format"
 	"github.com/TF2Stadium/Pauling/helpers"
 )
@@ -22,7 +21,7 @@ func SetSecret(secret string, id uint) {
 }
 
 func IsAllowed(lobbyID uint, commID string) (bool, string) {
-	var state lobby.State
+	var state int
 	var playerID uint
 	var needsSub bool
 	db.QueryRow("SELECT id FROM players WHERE steam_id = $1", commID).Scan(&playerID)
@@ -33,7 +32,8 @@ func IsAllowed(lobbyID uint, commID string) (bool, string) {
 
 	db.QueryRow("SELECT state FROM lobbies WHERE id = $1", lobbyID).Scan(&state)
 
-	if state == lobby.Waiting {
+	// 1 == Waiting
+	if state == 1 {
 		return false, "The lobby hasn't started yet."
 	}
 
