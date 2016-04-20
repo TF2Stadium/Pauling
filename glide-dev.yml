@@ -5,7 +5,6 @@ import:
   vcs: git
   version: dev
   subpackages:
-  - models/lobby
   - models/lobby/format
 - package: github.com/TF2Stadium/PlayerStatsScraper
   subpackages:
