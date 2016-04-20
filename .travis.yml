@@ -10,6 +10,7 @@ before_install:
   - go get github.com/Masterminds/glide
 install:
   - case $TRAVIS_BRANCH in master) glide -y glide.yml install ;; dev) glide -y glide-dev.yml install ;; esac
+  - bash /vendor/github.com/TF2Stadium/Helen/build_assets.bash
   - docker login -e="$DOCKER_EMAIL" -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
 script:
   - make static -B
