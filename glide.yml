@@ -20,3 +20,4 @@ import:
   - http
 - package: github.com/streadway/amqp
 - package: github.com/vibhavp/amqp-rpc
+- package: github.com/stretchr/testify

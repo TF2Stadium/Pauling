@@ -8,10 +8,12 @@ env:
   - GO15VENDOREXPERIMENT=1
 before_install:
   - go get github.com/Masterminds/glide
+  - git submodule init && git submodule update
 install:
   - case $TRAVIS_BRANCH in master) glide -y glide.yml install ;; dev) glide -y glide-dev.yml install ;; esac
   - docker login -e="$DOCKER_EMAIL" -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
 script:
+  - go test -race -v `go list ./... | grep -v /vendor/`
   - make static -B
   - case $TRAVIS_BRANCH in master) docker build -t tf2stadium/pauling:latest . ;; dev) docker build -t tf2stadium/pauling:dev . ;; esac 
 after_success:
