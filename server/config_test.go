@@ -31,6 +31,10 @@ func TestConfigName(t *testing.T) {
 
 		{"ctf_ballin", format.Bball, "etf2l", "etf2l/ctf_bball.cfg"},
 		{"ultiduo_balloo", format.Ultiduo, "etf2l", "etf2l/koth_ultiduo.cfg"},
+
+		{"cp_gravelpit", format.Highlander, "etf2l", "etf2l/cp_highlander_stopwatch.cfg"},
+		{"cp_steel", format.Highlander, "ugc", "ugc/cp_highlander_stopwatch.cfg"},
+		{"cp_gravelpit", format.Sixes, "etf2l", "etf2l/cp_sixes_stopwatch.cfg"},
 	}
 
 	for _, test := range cases {
