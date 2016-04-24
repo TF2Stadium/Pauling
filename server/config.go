@@ -37,7 +37,12 @@ func ConfigName(mapName string, lobbyType format.Format, ruleset string) (string
 		mapType = "koth"
 	}
 
-	file := fmt.Sprintf("%s/%s_%s.cfg", ruleset, mapType, formatString)
+	file := fmt.Sprintf("%s/%s_%s", ruleset, mapType, formatString)
+	if mapName == "cp_steel" || mapName == "cp_gravelpit" {
+		file += "_stopwatch"
+	}
+	file += ".cfg"
+
 	return file, nil
 }
 
