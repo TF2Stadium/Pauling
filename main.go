@@ -4,7 +4,6 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/DSchalla/go-pid"
 	"github.com/TF2Stadium/Pauling/config"
 	"github.com/TF2Stadium/Pauling/database"
 	"github.com/TF2Stadium/Pauling/helpers"
@@ -33,11 +32,6 @@ func main() {
 	}
 
 	database.Connect()
-
-	pid := &pid.Instance{}
-	if pid.Create() == nil {
-		defer pid.Remove()
-	}
 
 	server.StartListener()
 	server.CreateDB()
