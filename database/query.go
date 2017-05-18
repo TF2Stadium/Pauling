@@ -68,12 +68,14 @@ func GetSteamIDFromSlot(team, class string, lobbyID uint, lobbyType format.Forma
 	err = db.QueryRow("SELECT player_id FROM lobby_slots WHERE lobby_id = $1 AND slot = $2", lobbyID, slot).Scan(&playerid)
 	if err != nil {
 		helpers.Logger.Errorf("#%d: Error while getting steamid for %s %s: %v", lobbyID, team, class, err)
+		return "", err
 	}
 
 	var commID string
 	err = db.QueryRow("SELECT steam_id FROM players WHERE id = $1", playerid).Scan(&commID)
 	if err != nil {
 		helpers.Logger.Errorf("#%d: Error while getting steamid for %s %s: %v", lobbyID, team, class, err)
+		return "", err
 	}
 
 	return commID, nil

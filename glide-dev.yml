@@ -1,6 +1,5 @@
 package: github.com/TF2Stadium/Pauling
 import:
-- package: github.com/DSchalla/go-pid
 - package: github.com/TF2Stadium/Helen
   vcs: git
   version: dev

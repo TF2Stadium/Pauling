@@ -175,6 +175,9 @@ func (s *Server) Setup() error {
 	helpers.Logger.Debugf("#%d: Setting whitelist", s.LobbyId)
 	s.execWhitelist()
 
+	// Yes, we do not execute the config here.
+	// The config is executed a bit after the server is configured,
+	// hwen Helen makes the ReExecConfig RPC call.
 	helpers.Logger.Debugf("#%d: Configured", s.LobbyId)
 	return nil
 }
@@ -315,6 +318,7 @@ var (
 		format.Fours:      4,
 		format.Bball:      3,
 		format.Ultiduo:    3,
+		format.Prolander:  5,
 	}
 )
 
@@ -328,6 +332,8 @@ func slot(f format.Format) string {
 		return "soldier/medic"
 	case format.Bball:
 		return "soldier1/soldier2"
+	case format.Prolander:
+		return "scout/soldier/demo/medic/sniper/flex1/flex2"
 	default:
 		return "class name"
 	}
