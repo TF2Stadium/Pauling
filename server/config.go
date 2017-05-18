@@ -20,6 +20,7 @@ var formatMap = map[format.Format]string{
 	format.Ultiduo:    "ultiduo",
 	format.Fours:      "fours",
 	format.Debug:      "debug",
+	format.Prolander:  "prolander",
 }
 
 var rMapName = regexp.MustCompile(`^\w+(_+)*\w*$`)
