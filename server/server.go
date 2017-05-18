@@ -318,6 +318,7 @@ var (
 		format.Fours:      4,
 		format.Bball:      3,
 		format.Ultiduo:    3,
+		format.Prolander:  5,
 	}
 )
 
@@ -331,6 +332,8 @@ func slot(f format.Format) string {
 		return "soldier/medic"
 	case format.Bball:
 		return "soldier1/soldier2"
+	case format.Prolander:
+		return "scout/soldier/demo/medic/sniper/flex1/flex2"
 	default:
 		return "class name"
 	}
