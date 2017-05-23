@@ -35,6 +35,7 @@ func TestConfigName(t *testing.T) {
 		{"cp_gravelpit", format.Highlander, "etf2l", "etf2l/cp_highlander_stopwatch.cfg"},
 		{"cp_steel", format.Highlander, "ugc", "ugc/cp_highlander_stopwatch.cfg"},
 		{"cp_gravelpit", format.Sixes, "etf2l", "etf2l/cp_sixes_stopwatch.cfg"},
+		{"pl_upward", format.Prolander, "rgl", "rgl/pl_prolander.cfg"},
 	}
 
 	for _, test := range cases {
