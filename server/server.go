@@ -185,6 +185,11 @@ func (s *Server) Setup() error {
 func (s *Server) execWhitelist() {
 	// whitelist
 	_, err := s.rcon.Query(fmt.Sprintf("tftrue_whitelist_id %s", s.Whitelist))
+
+	if err == TF2RconWrapper.ErrUnknownCommand {
+		_, err := s.rcon.Query(fmt.Sprintf("sm_whitelist_id %s", s.Whitelist))
+	}
+
 	if err == TF2RconWrapper.ErrUnknownCommand {
 		var whitelist string
 
