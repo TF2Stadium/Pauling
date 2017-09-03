@@ -131,6 +131,11 @@ func (s *Server) Setup() error {
 		return err
 	}
 
+	// Set the tag right away to be really careful about serveme's
+	// internal caching not seeing us as a lobby and then caching that
+	// resul
+	s.rcon.AddTag("TF2Stadium")
+
 	// kick players
 	helpers.Logger.Debugf("#%d: Kicking all players", s.LobbyId)
 	kickErr := s.KickAll()
@@ -185,6 +190,11 @@ func (s *Server) Setup() error {
 func (s *Server) execWhitelist() {
 	// whitelist
 	_, err := s.rcon.Query(fmt.Sprintf("tftrue_whitelist_id %s", s.Whitelist))
+
+	if err == TF2RconWrapper.ErrUnknownCommand {
+		_, err = s.rcon.Query(fmt.Sprintf("sm_whitelist_id %s", s.Whitelist))
+	}
+
 	if err == TF2RconWrapper.ErrUnknownCommand {
 		var whitelist string
 
