@@ -192,7 +192,7 @@ func (s *Server) execWhitelist() {
 	_, err := s.rcon.Query(fmt.Sprintf("tftrue_whitelist_id %s", s.Whitelist))
 
 	if err == TF2RconWrapper.ErrUnknownCommand {
-		_, err := s.rcon.Query(fmt.Sprintf("sm_whitelist_id %s", s.Whitelist))
+		_, err = s.rcon.Query(fmt.Sprintf("sm_whitelist_id %s", s.Whitelist))
 	}
 
 	if err == TF2RconWrapper.ErrUnknownCommand {
