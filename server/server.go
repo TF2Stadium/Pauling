@@ -350,6 +350,29 @@ func slot(f format.Format) string {
 
 }
 
+func (s *Server) sendReport(target string, team string, argSlot string, self bool) {
+	//Got needed number of reports, ask helen to substitute player
+	publishEvent(Event{
+		Name:    PlayerSubstituted,
+		SteamID: target,
+		LobbyID: s.LobbyId,
+		Self:    self})
+
+	// tell timeout goroutine to stop (It is possible that the map
+	// entry will not exist if only 1 report is needed (such as debug
+	// lobbies))
+	s.mapMu.RLock()
+	timer, ok := s.repTimer[team+argSlot]
+	s.mapMu.RUnlock()
+
+	if ok && timer.Stop() {
+		s.mapMu.Lock()
+		delete(s.repTimer, team+argSlot)
+		s.mapMu.Unlock()
+
+	}
+}
+
 func (s *Server) report(data TF2RconWrapper.PlayerData) {
 	var team string
 
@@ -400,11 +423,7 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 
 	if target == source {
 		// !rep'ing themselves
-		publishEvent(Event{
-			Name:    PlayerSubstituted,
-			LobbyID: s.LobbyId,
-			SteamID: source,
-			Self:    true})
+		s.sendReport(source, team, argSlot, true)
 
 		say := fmt.Sprintf("Reporting player %s (%s)", data.Username, data.SteamId)
 		s.rcon.Say(say)
@@ -428,25 +447,7 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 
 	switch curReps {
 	case repsNeeded[s.Type]:
-		//Got needed number of reports, ask helen to substitute player
-		publishEvent(Event{
-			Name:    PlayerSubstituted,
-			SteamID: target,
-			LobbyID: s.LobbyId})
-
-		// tell timeout goroutine to stop (It is possible that the map
-		// entry will not exist if only 1 report is needed (such as debug
-		// lobbies))
-		s.mapMu.RLock()
-		timer, ok := s.repTimer[team+argSlot]
-		s.mapMu.RUnlock()
-
-		if ok && timer.Stop() {
-			s.mapMu.Lock()
-			delete(s.repTimer, team+argSlot)
-			s.mapMu.Unlock()
-
-		}
+		s.sendReport(target, team, argSlot, false)
 
 		say := fmt.Sprintf("Reporting %s %s: %s", strings.ToUpper(team), strings.ToUpper(argSlot), name)
 		s.rcon.Say(say)
