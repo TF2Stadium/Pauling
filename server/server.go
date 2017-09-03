@@ -362,6 +362,18 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 	argTeam := strings.ToLower(matches[1])
 	argSlot := strings.ToLower(matches[2])
 
+	var slot string
+
+	if argSlot == "med" {
+		slot = "medic"
+	} else if argSlot == "solly" {
+		slot = "soldier"
+	} else if argSlot == "demo" {
+		slot = "demoman"
+	} else {
+		slot = argSlot
+	}
+
 	source, _ := steamid.SteamIdToCommId(data.SteamId)
 
 	team = database.GetTeam(s.LobbyId, s.Type, source)
@@ -385,7 +397,7 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 		return
 	}
 
-	target, err := database.GetSteamIDFromSlot(team, argSlot, s.LobbyId, s.Type)
+	target, err := database.GetSteamIDFromSlot(team, slot, s.LobbyId, s.Type)
 	if err != nil {
 		var slots string
 
@@ -438,30 +450,30 @@ func (s *Server) report(data TF2RconWrapper.PlayerData) {
 		// entry will not exist if only 1 report is needed (such as debug
 		// lobbies))
 		s.mapMu.RLock()
-		timer, ok := s.repTimer[team+argSlot]
+		timer, ok := s.repTimer[team+slot]
 		s.mapMu.RUnlock()
 
 		if ok && timer.Stop() {
 			s.mapMu.Lock()
-			delete(s.repTimer, team+argSlot)
+			delete(s.repTimer, team+slot)
 			s.mapMu.Unlock()
 
 		}
 
-		say := fmt.Sprintf("Reporting %s %s: %s", strings.ToUpper(team), strings.ToUpper(argSlot), name)
+		say := fmt.Sprintf("Reporting %s %s: %s", strings.ToUpper(team), strings.ToUpper(slot), name)
 		s.rcon.Say(say)
 
 	case 1:
 		//first report happened, reset reps two minute later to 0, unless told to stop
 		timer := time.AfterFunc(2*time.Minute, func() {
 			ResetReportCount(target, s.LobbyId)
-			say := fmt.Sprintf("Reporting %s %s failed, couldn't get enough votes in 2 minutes.", strings.ToUpper(team), strings.ToUpper(argSlot))
+			say := fmt.Sprintf("Reporting %s %s failed, couldn't get enough votes in 2 minutes.", strings.ToUpper(team), strings.ToUpper(slot))
 			s.rcon.Say(say)
 
 		})
 
 		s.mapMu.Lock()
-		s.repTimer[team+argSlot] = timer
+		s.repTimer[team+slot] = timer
 		s.mapMu.Unlock()
 	}
 	say := fmt.Sprintf("Got %d votes for reporting %s (%d needed)", curReps, name, repsNeeded[s.Type])
