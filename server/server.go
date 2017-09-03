@@ -131,6 +131,11 @@ func (s *Server) Setup() error {
 		return err
 	}
 
+	// Set the tag right away to be really careful about serveme's
+	// internal caching not seeing us as a lobby and then caching that
+	// resul
+	s.rcon.AddTag("TF2Stadium")
+
 	// kick players
 	helpers.Logger.Debugf("#%d: Kicking all players", s.LobbyId)
 	kickErr := s.KickAll()
